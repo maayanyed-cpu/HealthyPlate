@@ -68,8 +68,8 @@ export default async function MealAnalysisPage({
       {/* Before/After comparison */}
       <div className="px-5 mt-3.5 grid grid-cols-2 gap-2.5">
         {[
-          { label: "Before", variant: "before" as const },
-          { label: "After", variant: "after" as const },
+          { label: "Before", variant: "before" as const, photoUrl: meal.beforePhotoUrl },
+          { label: "After", variant: "after" as const, photoUrl: meal.afterPhotoUrl },
         ].map((p) => (
           <div
             key={p.label}
@@ -79,10 +79,19 @@ export default async function MealAnalysisPage({
               background: "linear-gradient(135deg, #2A3530 0%, #4A6B5F 100%)",
             }}
           >
-            <span className="absolute top-2 left-2 bg-white/95 text-ink text-[10px] font-bold uppercase tracking-[0.06em] px-2 py-0.5 rounded-md">
+            <span className="absolute top-2 left-2 bg-white/95 text-ink text-[10px] font-bold uppercase tracking-[0.06em] px-2 py-0.5 rounded-md z-10">
               {p.label}
             </span>
-            <PlateSvg className="w-[80%] h-auto" variant={p.variant} />
+            {p.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={p.photoUrl}
+                alt={`${p.label} — ${name}'s ${meal.mealType}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <PlateSvg className="w-[80%] h-auto" variant={p.variant} />
+            )}
           </div>
         ))}
       </div>

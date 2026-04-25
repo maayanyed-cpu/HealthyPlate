@@ -62,13 +62,15 @@ model TasteRating {
 }
 
 model Meal {
-  id       String         @id @default(cuid())
-  childId  String
-  child    Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
-  mealType String         // breakfast | lunch | dinner | snack
-  loggedAt DateTime       @default(now())
-  status   String         // pending | complete
-  detected DetectedFood[]
+  id              String         @id @default(cuid())
+  childId         String
+  child           Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
+  mealType        String         // breakfast | lunch | dinner | snack
+  loggedAt        DateTime       @default(now())
+  status          String         // pending | complete
+  beforePhotoUrl  String?        // Vercel Blob URL of the before-shot
+  afterPhotoUrl   String?        // Vercel Blob URL of the after-shot
+  detected        DetectedFood[]
 
   @@index([childId, loggedAt])
 }

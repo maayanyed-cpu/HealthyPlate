@@ -23,8 +23,10 @@ async function getCurrentChildId(): Promise<string | null> {
 }
 
 /* Creates a pending Meal and saves the (mock) detected foods as before-phase rows.
-   Returns the new mealId so the caller can navigate forward with it. */
-export async function saveBeforeSnap(): Promise<{ mealId: string }> {
+   Returns the new mealId so the caller can navigate forward with it.
+   The photoUrl is the just-uploaded Vercel Blob URL, or null if the user
+   skipped the file picker (legacy SVG-only mode). */
+export async function saveBeforeSnap(photoUrl: string | null): Promise<{ mealId: string }> {
   const childId = await getCurrentChildId();
   if (!childId) throw new Error("No child profile yet — finish onboarding first.");
 
@@ -33,6 +35,7 @@ export async function saveBeforeSnap(): Promise<{ mealId: string }> {
       childId,
       mealType: inferMealType(),
       status: "pending",
+      beforePhotoUrl: photoUrl,
       detected: {
         create: SNAP_DETECTION.map((d) => ({
           foodKey: d.foodId,
@@ -52,11 +55,15 @@ export async function saveBeforeSnap(): Promise<{ mealId: string }> {
 }
 
 /* Adds after-phase rows with percentEaten and flips the meal to complete. */
-export async function saveAfterSnap(mealId: string): Promise<void> {
+export async function saveAfterSnap(
+  mealId: string,
+  photoUrl: string | null,
+): Promise<void> {
   await db.meal.update({
     where: { id: mealId },
     data: {
       status: "complete",
+      afterPhotoUrl: photoUrl ?? undefined,
       detected: {
         create: SNAP_DETECTION.map((d) => ({
           foodKey: d.foodId,

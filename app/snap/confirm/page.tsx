@@ -53,7 +53,16 @@ export default async function ConfirmPage({
           background: "linear-gradient(135deg, #2A3530 0%, #4A6B5F 100%)",
         }}
       >
-        <PlateSvg className="w-[80%] h-auto" variant="before" />
+        {meal.beforePhotoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={meal.beforePhotoUrl}
+            alt={`${name}'s ${meal.mealType}`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <PlateSvg className="w-[80%] h-auto" variant="before" />
+        )}
       </div>
 
       <div className="px-6 pb-1 font-serif text-[22px] font-medium text-ink">

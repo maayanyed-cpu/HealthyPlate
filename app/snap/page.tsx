@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import PlateSvg from "@/components/PlateSvg";
 import { SNAP_DETECTION } from "@/lib/mockData";
 import { saveBeforeSnap, saveAfterSnap } from "./actions";
@@ -27,8 +28,29 @@ function SnapInner() {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleShutter() {
+  /* Revoke any object URL when the component unmounts or the file changes */
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function handlePickFile(file: File) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    const url = URL.createObjectURL(file);
+    setPickedFile(file);
+    setPreviewUrl(url);
+    setError(null);
+    /* Auto-trigger the shutter once a file is picked — feels native on mobile,
+       since opening the camera + tapping shutter is one flow on iOS/Android. */
+    triggerShutter(file);
+  }
+
+  function triggerShutter(fileForUpload: File | null) {
     if (phase !== "idle") return;
     setError(null);
     setPhase("scanning");
@@ -36,20 +58,26 @@ function SnapInner() {
 
     setTimeout(() => setPhase("revealed"), 1400);
 
-    /* Run the DB write in parallel with the reveal animation; navigate
-       only after both the animation has played long enough AND the
-       write has completed. */
     (async () => {
       try {
+        let blobUrl: string | null = null;
+        if (fileForUpload) {
+          const blob = await upload(fileForUpload.name, fileForUpload, {
+            access: "public",
+            handleUploadUrl: "/api/blob/upload",
+          });
+          blobUrl = blob.url;
+        }
+
         let nextHref: string;
         if (mode === "before") {
-          const { mealId } = await saveBeforeSnap();
+          const { mealId } = await saveBeforeSnap(blobUrl);
           nextHref = `/snap/confirm?mealId=${mealId}`;
         } else {
           if (!incomingMealId) {
             throw new Error("Missing mealId for after-shot. Start a new before-shot.");
           }
-          await saveAfterSnap(incomingMealId);
+          await saveAfterSnap(incomingMealId, blobUrl);
           nextHref = `/snap/analysis?mealId=${incomingMealId}`;
         }
 
@@ -64,11 +92,27 @@ function SnapInner() {
     })();
   }
 
+  function handleShutterClick() {
+    if (phase !== "idle") return;
+    /* If user already picked a file, run with it. Otherwise open file picker
+       (which will auto-trigger via handlePickFile -> triggerShutter). */
+    if (pickedFile) {
+      triggerShutter(pickedFile);
+    } else {
+      fileInputRef.current?.click();
+    }
+  }
+
+  function handleSkipFilePicker() {
+    /* Demo path: shutter without a real photo, falls back to the SVG plate. */
+    triggerShutter(null);
+  }
+
   const statusText =
     phase === "idle"
       ? mode === "before"
-        ? "Center the plate in frame — we'll detect food and portions automatically."
-        : "Snap the plate now — we'll calculate what was eaten."
+        ? "Tap the shutter to pick a meal photo — we'll detect food and portions."
+        : "Tap the shutter to snap how much was eaten."
       : phase === "scanning"
       ? "Identifying foods…"
       : "Found 3 items ✓";
@@ -78,6 +122,19 @@ function SnapInner() {
       className="screen text-cream-soft"
       style={{ background: "#1A201E", paddingBottom: 0 }}
     >
+      {/* Hidden file input — drives both shutter and "Library" button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handlePickFile(file);
+        }}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4">
         <Link
@@ -92,12 +149,14 @@ function SnapInner() {
         </Link>
         <div className="text-[13px] font-semibold">Snap a meal</div>
         <button
-          aria-label="Flash"
-          className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-cream-soft"
+          type="button"
+          onClick={handleSkipFilePicker}
+          aria-label="Use demo plate"
+          disabled={phase !== "idle"}
+          title="Skip the file picker and use the demo plate"
+          className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-cream-soft text-[14px] disabled:opacity-50"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-          </svg>
+          ✨
         </button>
       </div>
 
@@ -151,10 +210,15 @@ function SnapInner() {
           background: "linear-gradient(135deg, #2A3530 0%, #4A6B5F 100%)",
         }}
       >
-        <PlateSvg
-          className="w-[80%] h-auto"
-          variant={mode === "after" ? "after" : "before"}
-        />
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={previewUrl} alt="Meal preview" className="w-full h-full object-cover" />
+        ) : (
+          <PlateSvg
+            className="w-[80%] h-auto"
+            variant={mode === "after" ? "after" : "before"}
+          />
+        )}
 
         {/* Detection boxes */}
         {phase === "revealed" &&
@@ -209,8 +273,10 @@ function SnapInner() {
       {/* Shutter */}
       <div className="flex justify-center items-center gap-9 px-5 pt-3 pb-9">
         <button
+          type="button"
           aria-label="Photo library"
-          className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center disabled:opacity-50"
           disabled={phase !== "idle"}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -221,16 +287,22 @@ function SnapInner() {
         </button>
         <button
           type="button"
-          onClick={handleShutter}
+          onClick={handleShutterClick}
           aria-label="Take photo"
           disabled={phase !== "idle"}
           className="w-[72px] h-[72px] rounded-full bg-cream-soft border-4 border-white/20 cursor-pointer hover:scale-95 active:scale-90 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ boxShadow: "0 0 0 6px rgba(255,255,255,0.05)" }}
         />
         <button
-          aria-label="Switch camera"
-          className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center"
-          disabled={phase !== "idle"}
+          type="button"
+          aria-label="Reset preview"
+          onClick={() => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPickedFile(null);
+            setPreviewUrl(null);
+          }}
+          disabled={phase !== "idle" || !pickedFile}
+          className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center disabled:opacity-30"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10" />
