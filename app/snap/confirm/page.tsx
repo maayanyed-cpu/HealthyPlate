@@ -1,11 +1,33 @@
 import Link from "next/link";
-import { SNAP_DETECTION } from "@/lib/mockData";
+import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
 import { getCurrentChild } from "@/lib/getCurrentChild";
 import PlateSvg from "@/components/PlateSvg";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConfirmPage() {
+function portionLabel(grams: number): string {
+  if (grams >= 70) return `≈ ½ cup · ~${grams} g`;
+  if (grams >= 35) return `≈ ⅓ cup · ~${grams} g`;
+  return `≈ ¼ cup · ~${grams} g`;
+}
+
+export default async function ConfirmPage({
+  searchParams,
+}: {
+  searchParams: { mealId?: string };
+}) {
+  const mealId = searchParams.mealId;
+  if (!mealId) notFound();
+
+  const meal = await db.meal.findUnique({
+    where: { id: mealId },
+    include: {
+      detected: { where: { phase: "before" }, orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!meal) notFound();
+
   const { name } = await getCurrentChild();
 
   return (
@@ -24,7 +46,6 @@ export default async function ConfirmPage() {
         <div className="w-[50px]" />
       </div>
 
-      {/* Photo */}
       <div
         className="mx-6 mt-3 mb-5 rounded-[20px] relative overflow-hidden flex items-center justify-center"
         style={{
@@ -36,7 +57,7 @@ export default async function ConfirmPage() {
       </div>
 
       <div className="px-6 pb-1 font-serif text-[22px] font-medium text-ink">
-        We found 3 foods
+        We found {meal.detected.length} foods
       </div>
       <div className="px-6 pb-4 text-[13px] text-ink-soft">
         Tap any item to fix the name or portion. Every correction trains{" "}
@@ -44,9 +65,9 @@ export default async function ConfirmPage() {
       </div>
 
       <div className="px-5 flex flex-col gap-2">
-        {SNAP_DETECTION.map((d) => (
+        {meal.detected.map((d) => (
           <div
-            key={d.foodId}
+            key={d.id}
             className="bg-surface border border-line rounded-[20px] px-4 py-3.5 flex items-center gap-3"
           >
             <div className="w-[38px] h-[38px] bg-cream rounded-xl flex items-center justify-center text-[22px] flex-shrink-0">
@@ -55,7 +76,7 @@ export default async function ConfirmPage() {
             <div className="flex-1">
               <div className="text-[14px] font-semibold text-ink">{d.name}</div>
               <div className="text-[12px] text-ink-soft mt-0.5">
-                {d.portionLabel}
+                {portionLabel(d.portionGrams)}
               </div>
             </div>
             <span className="text-[11px] font-semibold text-sage-deep bg-sage-pale px-2 py-0.5 rounded-full">
@@ -73,7 +94,7 @@ export default async function ConfirmPage() {
         </div>
         <div className="text-[12px] text-ink leading-[1.5]">
           <strong className="font-serif text-[13px] block">
-            Saved as {name}&apos;s lunch.
+            Saved as {name}&apos;s {meal.mealType}.
           </strong>
           Snap again when she&apos;s done — we&apos;ll calculate what she actually
           ate.
@@ -82,7 +103,7 @@ export default async function ConfirmPage() {
 
       <div className="px-5 pt-5 pb-2 mt-auto flex flex-col gap-1">
         <Link
-          href="/snap?mode=after"
+          href={`/snap?mode=after&mealId=${meal.id}`}
           className="block w-full text-center bg-sage-deep hover:bg-ink text-cream-soft rounded-[20px] py-4 px-6 text-[15px] font-semibold transition-colors"
         >
           Snap the after-shot →

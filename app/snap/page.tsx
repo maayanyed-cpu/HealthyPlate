@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import PlateSvg from "@/components/PlateSvg";
 import { SNAP_DETECTION } from "@/lib/mockData";
+import { saveBeforeSnap, saveAfterSnap } from "./actions";
 
 type Phase = "idle" | "scanning" | "revealed";
 type Mode = "before" | "after";
@@ -21,21 +22,46 @@ function SnapInner() {
   const router = useRouter();
   const params = useSearchParams();
   const initialMode: Mode = params.get("mode") === "after" ? "after" : "before";
+  const incomingMealId = params.get("mealId");
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [error, setError] = useState<string | null>(null);
 
   function handleShutter() {
     if (phase !== "idle") return;
+    setError(null);
     setPhase("scanning");
+    const startTime = Date.now();
 
-    /* Stage 1: scan animation (1.4s)
-       Stage 2: reveal detection boxes for ~1.6s
-       Stage 3: navigate forward */
     setTimeout(() => setPhase("revealed"), 1400);
-    setTimeout(() => {
-      router.push(mode === "before" ? "/snap/confirm" : "/snap/analysis");
-    }, 3000);
+
+    /* Run the DB write in parallel with the reveal animation; navigate
+       only after both the animation has played long enough AND the
+       write has completed. */
+    (async () => {
+      try {
+        let nextHref: string;
+        if (mode === "before") {
+          const { mealId } = await saveBeforeSnap();
+          nextHref = `/snap/confirm?mealId=${mealId}`;
+        } else {
+          if (!incomingMealId) {
+            throw new Error("Missing mealId for after-shot. Start a new before-shot.");
+          }
+          await saveAfterSnap(incomingMealId);
+          nextHref = `/snap/analysis?mealId=${incomingMealId}`;
+        }
+
+        const MIN_ANIMATION_MS = 3000;
+        const elapsed = Date.now() - startTime;
+        const wait = Math.max(0, MIN_ANIMATION_MS - elapsed);
+        setTimeout(() => router.push(nextHref), wait);
+      } catch (e) {
+        setPhase("idle");
+        setError(e instanceof Error ? e.message : "Something went wrong saving the snap.");
+      }
+    })();
   }
 
   const statusText =
@@ -171,7 +197,9 @@ function SnapInner() {
 
       {/* Status */}
       <div className="text-center px-5 pt-4 pb-3 text-[13px] text-white/70 min-h-[44px]">
-        {phase === "scanning" || phase === "revealed" ? (
+        {error ? (
+          <span className="text-[#F0C4A8] font-semibold">{error}</span>
+        ) : phase === "scanning" || phase === "revealed" ? (
           <strong className="text-cream-soft font-semibold">{statusText}</strong>
         ) : (
           statusText

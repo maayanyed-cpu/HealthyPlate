@@ -67,7 +67,8 @@ Data model (in-memory shapes in lib/mockData.ts)
 
 Child: id, name, age, gender
 Meal: id, childId, mealType, loggedAt, status (pending|complete)
-DetectedFood: id, mealId, name, emoji, portionGrams, percentEaten, confidence, phase (before|after)
+Meal: id, childId, mealType (breakfast|lunch|dinner|snack), loggedAt, status (pending|complete)
+DetectedFood: id, mealId, foodKey, name, emoji, portionGrams, confidence, phase (before|after), percentEaten
 TasteGraphEntry: (deferred — no taste-test screen in v0)
 SupplementRecommendation: (deferred)
 
@@ -118,6 +119,8 @@ Status
 [ ] Vision API integration (Anthropic SDK)
 [ ] Full 4-step onboarding (allergies, habits, height/weight)
 [ ] Taste test (~300 foods)
-[x] Persistent DB (Postgres on Vercel/Neon, Prisma 6) — User + Child tables
+[x] Persistent DB (Postgres on Vercel/Neon, Prisma 6) — User, Child, Meal, DetectedFood tables
+[x] Snap loop persists Meals + DetectedFood (foods still stubbed pending vision API)
+[x] Home meal counters from real DB queries; pending-meal callout gated on actual pending Meal
 [ ] Auth + multi-child (Clerk)
 [x] Deploy to Vercel (auto on push to main)

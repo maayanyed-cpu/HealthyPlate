@@ -24,6 +24,35 @@ model Child {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  meals     Meal[]
 
   @@index([userId, createdAt])
+}
+
+model Meal {
+  id       String         @id @default(cuid())
+  childId  String
+  child    Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
+  mealType String         // breakfast | lunch | dinner | snack
+  loggedAt DateTime       @default(now())
+  status   String         // pending | complete
+  detected DetectedFood[]
+
+  @@index([childId, loggedAt])
+}
+
+model DetectedFood {
+  id           String   @id @default(cuid())
+  mealId       String
+  meal         Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  foodKey      String   // e.g. "carrot", "broccoli"
+  name         String
+  emoji        String
+  portionGrams Int
+  confidence   Int      // 0–100
+  phase        String   // before | after
+  percentEaten Int?     // populated when after-phase is saved
+  createdAt    DateTime @default(now())
+
+  @@index([mealId])
 }

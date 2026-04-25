@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   BALANCE_HEADLINE,
   BALANCE_SCORE,
   NUTRIENT_BREAKDOWN,
   RECOMMENDATION,
-  SNAP_DETECTION,
 } from "@/lib/mockData";
+import { db } from "@/lib/db";
 import { getCurrentChild } from "@/lib/getCurrentChild";
 import PlateSvg from "@/components/PlateSvg";
 
@@ -14,7 +15,22 @@ const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 
 export const dynamic = "force-dynamic";
 
-export default async function MealAnalysisPage() {
+export default async function MealAnalysisPage({
+  searchParams,
+}: {
+  searchParams: { mealId?: string };
+}) {
+  const mealId = searchParams.mealId;
+  if (!mealId) notFound();
+
+  const meal = await db.meal.findUnique({
+    where: { id: mealId },
+    include: {
+      detected: { where: { phase: "after" }, orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!meal) notFound();
+
   const { name } = await getCurrentChild();
   const ringOffset = RING_CIRC * (1 - BALANCE_SCORE / 100);
 
@@ -37,7 +53,7 @@ export default async function MealAnalysisPage() {
 
       <div className="px-6 pt-4">
         <div className="font-serif text-[24px] font-medium text-ink">
-          {name}&apos;s lunch
+          {name}&apos;s {meal.mealType}
         </div>
         <div className="text-[12px] text-ink-soft mt-0.5">
           Logged forever to her food history
@@ -158,34 +174,36 @@ export default async function MealAnalysisPage() {
           What {name} ate
         </div>
         <div className="bg-surface border border-line-soft rounded-[20px] px-4 py-3.5">
-          {SNAP_DETECTION.map((d, i) => (
-            <div
-              key={d.foodId}
-              className={
-                "flex items-center gap-3 py-1.5 " +
-                (i > 0 ? "border-t border-dashed border-line-soft pt-2.5 mt-1" : "")
-              }
-            >
-              <span className="w-7 h-7 flex items-center justify-center text-[18px]">
-                {d.emoji}
-              </span>
-              <span className="flex-1 text-[13px] font-semibold text-ink">
-                {d.name}
-              </span>
-              <span className="text-[12px] text-ink-soft font-medium">
-                {Math.round((d.portionGrams * d.percentEaten) / 100)} g of{" "}
-                {d.portionGrams} g
-              </span>
-              <span
+          {meal.detected.map((d, i) => {
+            const pct = d.percentEaten ?? 0;
+            return (
+              <div
+                key={d.id}
                 className={
-                  "font-serif text-[14px] font-semibold w-10 text-right " +
-                  (d.percentEaten < 50 ? "text-carrot" : "text-sage-deep")
+                  "flex items-center gap-3 py-1.5 " +
+                  (i > 0 ? "border-t border-dashed border-line-soft pt-2.5 mt-1" : "")
                 }
               >
-                {d.percentEaten}%
-              </span>
-            </div>
-          ))}
+                <span className="w-7 h-7 flex items-center justify-center text-[18px]">
+                  {d.emoji}
+                </span>
+                <span className="flex-1 text-[13px] font-semibold text-ink">
+                  {d.name}
+                </span>
+                <span className="text-[12px] text-ink-soft font-medium">
+                  {Math.round((d.portionGrams * pct) / 100)} g of {d.portionGrams} g
+                </span>
+                <span
+                  className={
+                    "font-serif text-[14px] font-semibold w-10 text-right " +
+                    (pct < 50 ? "text-carrot" : "text-sage-deep")
+                  }
+                >
+                  {pct}%
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

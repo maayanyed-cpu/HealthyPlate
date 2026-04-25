@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { TODAYS_PLAN } from "@/lib/mockData";
 import { getCurrentChild } from "@/lib/getCurrentChild";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 export default async function HomePage() {
   const child = await getCurrentChild();
@@ -12,6 +19,26 @@ export default async function HomePage() {
     month: "long",
     day: "numeric",
   });
+
+  let mealsToday = 0;
+  let mealsTotal = 0;
+  let pendingMeal: { id: string; mealType: string } | null = null;
+
+  if (child.id) {
+    [mealsToday, mealsTotal, pendingMeal] = await Promise.all([
+      db.meal.count({
+        where: { childId: child.id, loggedAt: { gte: startOfToday() } },
+      }),
+      db.meal.count({ where: { childId: child.id } }),
+      db.meal.findFirst({
+        where: { childId: child.id, status: "pending" },
+        orderBy: { loggedAt: "desc" },
+        select: { id: true, mealType: true },
+      }),
+    ]);
+  }
+
+  const pronoun = child.gender === "boy" ? "he" : "she";
 
   return (
     <div className="screen">
@@ -29,25 +56,29 @@ export default async function HomePage() {
         </button>
       </div>
 
-      {/* Pending after-shot */}
-      <Link
-        href="/snap?mode=after"
-        className="mx-5 mb-3.5 px-4 py-3.5 rounded-[20px] flex items-center gap-3 text-white shadow-[0_6px_16px_rgba(216,132,99,0.25)]"
-        style={{ background: "linear-gradient(120deg, #D88463, #E8946A)" }}
-      >
-        <span className="w-[38px] h-[38px] bg-white/20 rounded-xl flex items-center justify-center text-[20px]">
-          📸
-        </span>
-        <span className="flex-1">
-          <span className="block text-[13px] font-bold">Lunch is in progress</span>
-          <span className="block text-[11px] opacity-90 mt-0.5">
-            Snap how much {child.name} ate when she&apos;s done
+      {/* Pending after-shot — only shown when there's actually a meal in progress */}
+      {pendingMeal && (
+        <Link
+          href={`/snap?mode=after&mealId=${pendingMeal.id}`}
+          className="mx-5 mb-3.5 px-4 py-3.5 rounded-[20px] flex items-center gap-3 text-white shadow-[0_6px_16px_rgba(216,132,99,0.25)]"
+          style={{ background: "linear-gradient(120deg, #D88463, #E8946A)" }}
+        >
+          <span className="w-[38px] h-[38px] bg-white/20 rounded-xl flex items-center justify-center text-[20px]">
+            📸
           </span>
-        </span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="opacity-85">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </Link>
+          <span className="flex-1">
+            <span className="block text-[13px] font-bold capitalize">
+              {pendingMeal.mealType} is in progress
+            </span>
+            <span className="block text-[11px] opacity-90 mt-0.5">
+              Snap how much {child.name} ate when {pronoun}&apos;s done
+            </span>
+          </span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="opacity-85">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+      )}
 
       {/* Hero card */}
       <div
@@ -70,11 +101,11 @@ export default async function HomePage() {
             <div className="text-[11px] opacity-75 mt-1">Acceptance prob.</div>
           </div>
           <div>
-            <div className="font-serif text-[28px] font-medium leading-none">12</div>
-            <div className="text-[11px] opacity-75 mt-1">Meals logged</div>
+            <div className="font-serif text-[28px] font-medium leading-none">{mealsToday}</div>
+            <div className="text-[11px] opacity-75 mt-1">Today</div>
           </div>
           <div>
-            <div className="font-serif text-[28px] font-medium leading-none">147</div>
+            <div className="font-serif text-[28px] font-medium leading-none">{mealsTotal}</div>
             <div className="text-[11px] opacity-75 mt-1">All-time</div>
           </div>
         </div>
