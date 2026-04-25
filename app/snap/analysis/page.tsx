@@ -1,25 +1,21 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { readChild } from "@/lib/childStore";
 import {
   BALANCE_HEADLINE,
   BALANCE_SCORE,
-  DEFAULT_CHILD,
   NUTRIENT_BREAKDOWN,
   RECOMMENDATION,
   SNAP_DETECTION,
 } from "@/lib/mockData";
+import { getCurrentChild } from "@/lib/getCurrentChild";
 import PlateSvg from "@/components/PlateSvg";
 
 const RING_RADIUS = 34;
 const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 
-export default function MealAnalysisPage() {
-  const [name, setName] = useState(DEFAULT_CHILD.name);
-  useEffect(() => setName(readChild().name), []);
+export const dynamic = "force-dynamic";
 
+export default async function MealAnalysisPage() {
+  const { name } = await getCurrentChild();
   const ringOffset = RING_CIRC * (1 - BALANCE_SCORE / 100);
 
   return (

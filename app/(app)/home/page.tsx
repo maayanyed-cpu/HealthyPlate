@@ -1,32 +1,24 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { readChild } from "@/lib/childStore";
-import type { ChildProfile } from "@/lib/mockData";
-import { DEFAULT_CHILD, TODAYS_PLAN } from "@/lib/mockData";
+import { TODAYS_PLAN } from "@/lib/mockData";
+import { getCurrentChild } from "@/lib/getCurrentChild";
 
-const TODAY_LABEL = new Date().toLocaleDateString("en-US", {
-  weekday: "long",
-  month: "long",
-  day: "numeric",
-});
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const [child, setChild] = useState<ChildProfile>(DEFAULT_CHILD);
-
-  useEffect(() => {
-    setChild(readChild());
-  }, []);
-
+export default async function HomePage() {
+  const child = await getCurrentChild();
   const initial = child.name.charAt(0).toUpperCase();
+  const todayLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="screen">
       {/* Header */}
       <div className="px-6 pt-3 pb-2 flex justify-between items-center">
         <div>
-          <div className="text-[13px] text-ink-soft">{TODAY_LABEL}</div>
+          <div className="text-[13px] text-ink-soft">{todayLabel}</div>
           <div className="font-serif text-[22px] font-medium mt-0.5">Good morning</div>
         </div>
         <button className="bg-surface border border-line rounded-full pl-3 pr-1 py-1 flex items-center gap-2 text-[13px] font-semibold">

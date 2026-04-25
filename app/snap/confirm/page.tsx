@@ -1,14 +1,12 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { readChild } from "@/lib/childStore";
-import { DEFAULT_CHILD, SNAP_DETECTION } from "@/lib/mockData";
+import { SNAP_DETECTION } from "@/lib/mockData";
+import { getCurrentChild } from "@/lib/getCurrentChild";
 import PlateSvg from "@/components/PlateSvg";
 
-export default function ConfirmPage() {
-  const [name, setName] = useState(DEFAULT_CHILD.name);
-  useEffect(() => setName(readChild().name), []);
+export const dynamic = "force-dynamic";
+
+export default async function ConfirmPage() {
+  const { name } = await getCurrentChild();
 
   return (
     <div className="screen bg-cream-soft">

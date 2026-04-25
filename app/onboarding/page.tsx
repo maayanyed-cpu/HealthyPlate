@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { writeChild } from "@/lib/childStore";
 import { DEFAULT_CHILD } from "@/lib/mockData";
+import { createChild } from "./actions";
 
 const AGES = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 const GENDERS = [
@@ -19,18 +19,26 @@ export default function OnboardingPage() {
   const [age, setAge] = useState<number>(DEFAULT_CHILD.age);
   const [gender, setGender] =
     useState<"girl" | "boy" | "unspecified">(DEFAULT_CHILD.gender);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    // Lock the body to the cream-soft surface while in onboarding
     document.documentElement.style.setProperty("background", "var(--cream-soft)");
   }, []);
 
-  const canContinue = name.trim().length > 0;
+  const canContinue = name.trim().length > 0 && !pending;
 
   function handleContinue() {
     if (!canContinue) return;
-    writeChild({ name: name.trim(), age, gender });
-    router.push("/home");
+    setError(null);
+    startTransition(async () => {
+      try {
+        await createChild({ name: name.trim(), age, gender });
+        router.push("/home");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+      }
+    });
   }
 
   return (
@@ -145,13 +153,18 @@ export default function OnboardingPage() {
         </div>
 
         <div className="mt-auto pt-5 flex flex-col gap-1">
+          {error && (
+            <div className="text-[12px] text-tomato bg-[#F8E2DE] border border-tomato/20 rounded-sm px-3 py-2 mb-1">
+              {error}
+            </div>
+          )}
           <button
             type="button"
             onClick={handleContinue}
             disabled={!canContinue}
             className="w-full bg-sage-deep hover:bg-ink text-cream-soft rounded-[20px] py-4 px-6 text-[15px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continue →
+            {pending ? "Saving…" : "Continue →"}
           </button>
           <Link
             href="/"

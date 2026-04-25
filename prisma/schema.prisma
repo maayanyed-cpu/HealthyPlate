@@ -1,0 +1,29 @@
+// Healthy Plate v0 schema.
+// Single hardcoded singleton User until Clerk auth lands; Children link back to it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  children  Child[]
+}
+
+model Child {
+  id        String   @id @default(cuid())
+  name      String
+  age       Int
+  gender    String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

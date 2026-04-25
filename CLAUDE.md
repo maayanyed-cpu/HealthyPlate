@@ -9,7 +9,7 @@ Healthy_Plate_Investor_Deck.pptx — product context, market positioning, busine
 Stack
 
 Web app: Next.js 14 (App Router), TypeScript, Tailwind CSS — at the repo root (not in web/, so Vercel auto-detects)
-Database: none in v0 — pure in-memory mock data via lib/mockData.ts. Postgres (Neon) when persistence is needed.
+Database: Postgres on Vercel (Neon under the hood). Prisma 6 ORM. Schema in prisma/schema.prisma; client in lib/db.ts; getCurrentChild helper in lib/getCurrentChild.ts. Singleton "default-user" until Clerk auth lands.
 AI: Anthropic API via @anthropic-ai/sdk for the food-detection vision call (stubbed in v0)
 Auth: Clerk (deferred until after core screens work)
 Mobile: Expo / React Native — later phase, after web is solid
@@ -54,8 +54,12 @@ HealthyPlate/
 │   ├── PlateSvg.tsx             # before/after plate art
 │   └── ComingSoon.tsx
 ├── lib/
-│   ├── mockData.ts              # 10 foods + hardcoded snap result + plan
-│   └── childStore.ts            # localStorage child profile
+│   ├── db.ts                    # Prisma client singleton + ensureDefaultUser
+│   ├── getCurrentChild.ts       # server helper: latest child for default user
+│   └── mockData.ts              # 10 foods + hardcoded snap result + plan
+├── prisma/
+│   ├── schema.prisma            # User, Child
+│   └── migrations/              # SQL migration history (committed)
 └── public/
     └── prototype.html           # the design source-of-truth, also live at /prototype.html
 
@@ -90,8 +94,13 @@ pnpm dev
 # Type-check + lint
 pnpm typecheck && pnpm lint
 
-# Build (what Vercel runs)
+# Build (what Vercel runs — also generates Prisma client)
 pnpm build
+
+# Prisma — pull live env vars first, then run
+vercel env pull .env.local
+set -a && source .env.local && set +a && pnpm prisma migrate dev --name <change_name>
+pnpm prisma studio   # GUI for browsing DB rows
 ```
 
 Status
@@ -109,6 +118,6 @@ Status
 [ ] Vision API integration (Anthropic SDK)
 [ ] Full 4-step onboarding (allergies, habits, height/weight)
 [ ] Taste test (~300 foods)
-[ ] Persistent DB (Postgres/Neon)
+[x] Persistent DB (Postgres on Vercel/Neon, Prisma 6) — User + Child tables
 [ ] Auth + multi-child (Clerk)
 [x] Deploy to Vercel (auto on push to main)
