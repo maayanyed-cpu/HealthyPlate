@@ -103,21 +103,6 @@ export const TODAYS_PLAN = [
   },
 ];
 
-export const NUTRIENT_BREAKDOWN = [
-  { name: "Protein", pct: 65, tone: "good" as const },
-  { name: "Iron", pct: 42, tone: "med" as const },
-  { name: "Fiber", pct: 88, tone: "good" as const },
-  { name: "Vit. A", pct: 95, tone: "good" as const },
-  { name: "Vit. D", pct: 28, tone: "low" as const },
-  { name: "Calcium", pct: 55, tone: "med" as const },
-];
-
-export const BALANCE_SCORE = 78;
-export const BALANCE_HEADLINE =
-  "Solid lunch — strong on Vit. A and fiber, light on Vit. D.";
-export const RECOMMENDATION =
-  "Try adding cucumber slices at dinner — Maya rated it ❤️ and it pairs with the tomato pasta.";
-
 export type ChildProfile = {
   name: string;
   age: number;

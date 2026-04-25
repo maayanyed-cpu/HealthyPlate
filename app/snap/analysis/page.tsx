@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  BALANCE_HEADLINE,
-  BALANCE_SCORE,
-  NUTRIENT_BREAKDOWN,
-  RECOMMENDATION,
-} from "@/lib/mockData";
 import { db } from "@/lib/db";
 import { getCurrentChild } from "@/lib/getCurrentChild";
+import { computeAnalysis } from "@/lib/nutrition";
 import PlateSvg from "@/components/PlateSvg";
 
 const RING_RADIUS = 34;
@@ -32,7 +27,17 @@ export default async function MealAnalysisPage({
   if (!meal) notFound();
 
   const { name } = await getCurrentChild();
-  const ringOffset = RING_CIRC * (1 - BALANCE_SCORE / 100);
+
+  const analysis = computeAnalysis(
+    meal.detected.map((d) => ({
+      foodKey: d.foodKey,
+      portionGrams: d.portionGrams,
+      percentEaten: d.percentEaten ?? 0,
+    })),
+    meal.mealType,
+  );
+  const { balanceScore, balanceHeadline, nutrients, recommendation } = analysis;
+  const ringOffset = RING_CIRC * (1 - balanceScore / 100);
 
   return (
     <div className="screen bg-cream-soft">
@@ -113,7 +118,7 @@ export default async function MealAnalysisPage({
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center font-serif">
               <div className="text-[28px] font-semibold leading-none">
-                {BALANCE_SCORE}
+                {balanceScore}
               </div>
               <div className="text-[10px] opacity-70 mt-0.5 uppercase tracking-[0.1em]">
                 Balance
@@ -125,7 +130,7 @@ export default async function MealAnalysisPage({
               Today&apos;s score
             </div>
             <div className="font-serif text-[18px] font-medium leading-[1.25] mt-1.5">
-              {BALANCE_HEADLINE}
+              {balanceHeadline}
             </div>
           </div>
         </div>
@@ -137,7 +142,7 @@ export default async function MealAnalysisPage({
           Nutrient breakdown
         </div>
         <div className="bg-surface border border-line-soft rounded-[20px] px-[18px] py-4">
-          {NUTRIENT_BREAKDOWN.map((n) => (
+          {nutrients.map((n) => (
             <div key={n.name} className="flex items-center gap-3 py-1.5">
               <span className="w-[70px] text-[12px] font-semibold text-ink">
                 {n.name}
@@ -220,7 +225,7 @@ export default async function MealAnalysisPage({
             Try this tomorrow
           </div>
           <div className="font-serif text-[15px] font-medium text-ink leading-[1.4] mt-1">
-            {RECOMMENDATION}
+            {recommendation}
           </div>
         </div>
       </div>
