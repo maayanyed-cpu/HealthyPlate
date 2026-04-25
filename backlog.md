@@ -16,27 +16,103 @@
 
 ---
 
-## Evaluation matrix
+## Welcome
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| **Welcome screen** | Built | Done | — | None — pure marketing landing |
-| **Onboarding · Step 1 (name/age/gender)** | Built | Partial — missing the optional `height/weight` block and the "Skip — add later" mechanism (`hwSkippedPill`) | Done — `createChild` writes to `Child` | Add H/W fields + skip-later flow; extend `Child` schema with `heightCm`, `weightKg` (nullable) + `lastMeasuredAt` |
-| **Onboarding · Step 2 (diet/allergies)** | Built | Done | Done — `updateChildDiet` writes `allergies[]`, `intolerances[]`, `dietStyle`, `notes` | None |
-| **Onboarding · Step 3 (habits)** | Built | Done | Done — `updateChildHabits` writes `habits[]` | None |
-| **Onboarding · Step 4 (confirm)** | Built | Partial — prototype shows additional rows ("Growth", "Watch list") that depend on H/W + nutrient-tracking history we don't yet have | Done — server-rendered from the saved Child row | Add `Growth` and `Watch list` rows once H/W (step 1 follow-up) and nutrient history exist |
-| **Taste test (~300 foods)** | Built | Partial — uses 10 foods (not 300); category pill counts reflect real data not prototype's inflated counts; "Save" button only at top + bottom (no "+30 unlocks her plan" milestone count messaging beyond the unlock toast) | Done — `Food` table seeded from `mockData.FOODS`; `TasteRating` upserts on each save | Curate ~300 foods + their categories; persist them in `Food` table; add the "+30 unlocks her starter plan" progress threshold copy variant |
-| **Home — header + hero + plan list + quick actions** | Built | Done | Done — reads latest `Child` + `Meal` counts; pending callout gated on real `pending` meal | None |
-| **Home — "Time to measure Maya" CTA banner** | Missing | — | — | Banner not rendered; gated on `lastMeasuredAt` field that doesn't exist yet |
-| **Home — Profile-completion ring (`18% → Keep building taste profile`)** | Missing | — | — | Card not rendered; should now be wirable since `TasteRating` exists — count rated/total via `db.tasteRating.count` |
-| **Home — "Veggie of the day" card** | Missing | — | — | Card not rendered; needs `Veggie` content table or static content file |
-| **Snap viewfinder + reveal animation** | Built | Partial — fixed SVG plate (no real camera/file upload); no dancing-veggies AR overlay | Partial — `Meal` + `DetectedFood` rows are written, but the foods themselves are still hardcoded `SNAP_DETECTION` from `mockData` | Real input (file upload or `getUserMedia`); Anthropic SDK vision call to populate detected foods; render AR overlay on healthy-food detection |
-| **Snap → Confirm (detected foods)** | Built | Done | Done — reads `Meal.detected` (phase=before) by `mealId` | None — closes the loop once vision API replaces `SNAP_DETECTION` |
-| **Snap → Meal Analysis** | Built | Done | Done — reads `Meal.detected` (phase=after); balance/nutrients/recommendation now computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated) |
-| **Describe-a-meal (text entry)** | Missing | — | — | Whole screen unbuilt; needs LLM extraction call + same `Meal`/`DetectedFood` write path |
-| **Plan tab (week strip + generator + recipes + supplement card)** | Stub | Coming-soon placeholder | — | Whole tab unbuilt; needs `MealPlan` + `Recipe` + `SupplementRec` tables and a generator that consumes the taste graph (which now exists — `TasteRating` is ready to be read) |
-| **Insights tab (stat cards, taste graph bars, balance history, growth chart, peer comparison, veggie collection)** | Stub | Coming-soon placeholder | — | Whole tab unbuilt; growth chart needs WHO percentile data + `GrowthMeasurement` table; balance history needs analyzed-meal aggregates; **taste graph bars are now data-ready** via `TasteRating` |
-| **Friends tab (unlockable veggie characters + stories)** | Stub | Coming-soon placeholder | — | Whole tab unbuilt; needs static content file for veggie cast + `UnlockedVeggie` per-child table |
+| Welcome screen | Built | Done | — | None — pure marketing landing |
+
+---
+
+## Onboarding flow
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Step 1 (name/age/gender) | Built | Partial — missing optional `height/weight` block + "Skip — add later" mechanism | Done — `createChild` writes to `Child` | Add H/W fields + skip-later flow; extend `Child` schema with `heightCm`, `weightKg` (nullable) + `lastMeasuredAt` |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Step 2 (diet/allergies) | Built | Done | Done — `updateChildDiet` writes `allergies[]`, `intolerances[]`, `dietStyle`, `notes` | None |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Step 3 (habits) | Built | Done | Done — `updateChildHabits` writes `habits[]` | None |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Step 4 (confirm) | Built | Partial — prototype shows additional rows ("Growth", "Watch list") that depend on H/W + nutrient-tracking history we don't yet have | Done — server-rendered from the saved Child row | Add `Growth` + `Watch list` rows once H/W and nutrient history exist |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Taste test (~300 foods) | Built | Partial — uses 10 foods (not 300); category pill counts reflect real data not prototype's inflated counts | Done — `Food` table seeded from `mockData.FOODS`; `TasteRating` upserts on re-rating | Curate ~300 foods + their categories; persist them in `Food` table; add the "+30 unlocks her starter plan" progress threshold copy variant |
+
+---
+
+## Home tab
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Header + hero + plan list + quick actions | Built | Done | Done — reads latest `Child` + `Meal` counts; pending callout gated on real `pending` meal | None |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| "Time to measure Maya" CTA banner | Missing | — | — | Banner not rendered; gated on `lastMeasuredAt` field that doesn't exist yet |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Profile-completion ring (`18% → Keep building taste profile`) | Missing | — | — | Card not rendered; should now be wirable since `TasteRating` exists — count rated/total via `db.tasteRating.count` |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| "Veggie of the day" card | Missing | — | — | Card not rendered; needs `Veggie` content table or static content file |
+
+---
+
+## Snap flow
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Viewfinder + reveal animation | Built | Partial — fixed SVG plate (no real camera/file upload); no dancing-veggies AR overlay | Partial — `Meal` + `DetectedFood` rows are written, but the foods themselves are still hardcoded `SNAP_DETECTION` from `mockData` | Real input (file upload or `getUserMedia`); Anthropic SDK vision call to populate detected foods; render AR overlay on healthy-food detection |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Confirm (detected foods) | Built | Done | Done — reads `Meal.detected` (phase=before) by `mealId` | None — closes the loop once vision API replaces `SNAP_DETECTION` |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Meal Analysis | Built | Done | Done — reads `Meal.detected` (phase=after); balance/nutrients/recommendation now computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated) |
+
+---
+
+## Describe-a-meal
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Text-entry meal logger | Missing | — | — | Whole screen unbuilt; needs LLM extraction call + same `Meal`/`DetectedFood` write path |
+
+---
+
+## Plan tab
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Week strip + generator + recipes + supplement card | Stub | Coming-soon placeholder | — | Whole tab unbuilt; needs `MealPlan` + `Recipe` + `SupplementRec` tables and a generator that consumes the (now-available) taste graph |
+
+---
+
+## Insights tab
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Stat cards, taste graph bars, balance history, growth chart, peer comparison, veggie collection | Stub | Coming-soon placeholder | — | Whole tab unbuilt; growth chart needs WHO percentile data + `GrowthMeasurement` table; balance history needs analyzed-meal aggregates; **taste graph bars are now data-ready** via `TasteRating` |
+
+---
+
+## Friends tab
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Unlockable veggie characters + stories | Stub | Coming-soon placeholder | — | Whole tab unbuilt; needs static content file for veggie cast + `UnlockedVeggie` per-child table |
 
 ---
 
