@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Healthy Plate — AI nutrition for families</title>
+  <meta name="description" content="An AI nutrition companion for families with kids ages 1–10. Snap a meal, learn what they love, and grow healthier eaters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #F5F1E8;
+      --cream-soft: #FAF7F0;
+      --surface: #FFFFFF;
+      --sage-deep: #4A6B5F;
+      --sage: #5A8073;
+      --sage-pale: #DCE8DD;
+      --carrot: #D88463;
+      --tomato: #C95C4D;
+      --gold: #E5B96A;
+      --berry: #8B5A6B;
+      --ink: #2D3A36;
+      --ink-soft: #6B7670;
+      --border: #E8E5DD;
+      --shadow-sm: 0 1px 2px rgba(45,58,54,0.04), 0 2px 8px rgba(45,58,54,0.04);
+      --shadow-md: 0 4px 12px rgba(45,58,54,0.06), 0 12px 32px rgba(45,58,54,0.08);
+      --shadow-lg: 0 16px 48px rgba(45,58,54,0.12);
+      --radius-sm: 12px;
+      --radius: 20px;
+      --radius-lg: 28px;
+      --radius-xl: 36px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: linear-gradient(135deg, #EFEAD8 0%, #E8E5D4 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    .nav {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--sage-deep);
+      letter-spacing: -0.01em;
+    }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--ink-soft);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--sage-deep); }
+
+    .hero {
+      max-width: 920px;
+      margin: 48px auto 80px;
+      padding: 0 32px;
+      text-align: center;
+    }
+    .eyebrow {
+      font-family: 'Fraunces', serif;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--sage-deep);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(40px, 6vw, 64px);
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      color: var(--ink);
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--sage);
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--ink-soft);
+      max-width: 580px;
+      margin: 0 auto 36px;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 28px;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-primary {
+      background: var(--sage-deep);
+      color: var(--cream-soft);
+      box-shadow: var(--shadow-md);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--cream-soft); }
+
+    .features {
+      max-width: 1120px;
+      margin: 0 auto 96px;
+      padding: 0 32px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .feature {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+    .icon-snap { background: var(--sage-pale); color: var(--sage-deep); }
+    .icon-learn { background: #F0DFD2; color: var(--carrot); }
+    .icon-grow { background: #F4E5C7; color: var(--gold); }
+    .feature h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+    .feature p {
+      font-size: 15px;
+      color: var(--ink-soft);
+    }
+
+    .footer {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--ink-soft);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .features { margin-bottom: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="brand">Healthy Plate</div>
+    <ul class="nav-links">
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#about">About</a></li>
+    </ul>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">For families with kids 1–10</div>
+    <h1>Raise <em>healthier</em> eaters,<br>one snapshot at a time.</h1>
+    <p>Snap a meal. Our AI identifies foods and portions, learns what your child accepts, and suggests recipes and supplements tailored to them.</p>
+    <div class="cta-row">
+      <a href="#" class="btn btn-primary">Get early access</a>
+      <a href="#how" class="btn btn-secondary">See how it works</a>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="feature">
+      <div class="feature-icon icon-snap">📸</div>
+      <h3>Snap a meal</h3>
+      <p>Take a photo and our vision model identifies every food and estimates portions in seconds.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon icon-learn">🌱</div>
+      <h3>Learn their taste</h3>
+      <p>A per-child taste graph quietly tracks what they love, tolerate, and refuse — so you can stop guessing.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon icon-grow">✨</div>
+      <h3>Grow with them</h3>
+      <p>Personalized recipes, mini-games, and a monthly supplement pack that fills the real gaps in their diet.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div>© 2026 Healthy Plate</div>
+    <div>maayan.yed@gmail.com</div>
+  </footer>
+</body>
+</html>
