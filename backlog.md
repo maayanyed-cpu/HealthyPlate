@@ -4,6 +4,8 @@
 
 **Last updated:** 2026-04-25 (commit `5a2988a`)
 
+**Legend:** ✅ Done · 🟡 Partial · ⏳ Stub (Coming-soon) · ❌ Missing · — N/A
+
 ---
 
 ## Changes since last audit
@@ -20,7 +22,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Welcome screen | Built | Done | — | None — pure marketing landing |
+| Welcome screen | ✅ Built | ✅ Done | — | None — pure marketing landing |
 
 ---
 
@@ -28,23 +30,23 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Step 1 (name/age/gender) | Built | Partial — missing optional `height/weight` block + "Skip — add later" mechanism | Done — `createChild` writes to `Child` | Add H/W fields + skip-later flow; extend `Child` schema with `heightCm`, `weightKg` (nullable) + `lastMeasuredAt` |
+| Step 1 (name/age/gender) | ✅ Built | 🟡 Partial — missing optional `height/weight` block + "Skip — add later" mechanism | ✅ Done — `createChild` writes to `Child` | Add H/W fields + skip-later flow; extend `Child` schema with `heightCm`, `weightKg` (nullable) + `lastMeasuredAt` |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Step 2 (diet/allergies) | Built | Done | Done — `updateChildDiet` writes `allergies[]`, `intolerances[]`, `dietStyle`, `notes` | None |
+| Step 2 (diet/allergies) | ✅ Built | ✅ Done | ✅ Done — `updateChildDiet` writes `allergies[]`, `intolerances[]`, `dietStyle`, `notes` | None |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Step 3 (habits) | Built | Done | Done — `updateChildHabits` writes `habits[]` | None |
+| Step 3 (habits) | ✅ Built | ✅ Done | ✅ Done — `updateChildHabits` writes `habits[]` | None |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Step 4 (confirm) | Built | Partial — prototype shows additional rows ("Growth", "Watch list") that depend on H/W + nutrient-tracking history we don't yet have | Done — server-rendered from the saved Child row | Add `Growth` + `Watch list` rows once H/W and nutrient history exist |
+| Step 4 (confirm) | ✅ Built | 🟡 Partial — prototype shows additional rows ("Growth", "Watch list") that depend on H/W + nutrient-tracking history we don't yet have | ✅ Done — server-rendered from the saved Child row | Add `Growth` + `Watch list` rows once H/W and nutrient history exist |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Taste test (~300 foods) | Built | Partial — uses 10 foods (not 300); category pill counts reflect real data not prototype's inflated counts | Done — `Food` table seeded from `mockData.FOODS`; `TasteRating` upserts on re-rating | Curate ~300 foods + their categories; persist them in `Food` table; add the "+30 unlocks her starter plan" progress threshold copy variant |
+| Taste test (~300 foods) | ✅ Built | 🟡 Partial — uses 10 foods (not 300); category pill counts reflect real data not prototype's inflated counts | ✅ Done — `Food` table seeded from `mockData.FOODS`; `TasteRating` upserts on re-rating | Curate ~300 foods + their categories; persist them in `Food` table; add the "+30 unlocks her starter plan" progress threshold copy variant |
 
 ---
 
@@ -52,19 +54,19 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Header + hero + plan list + quick actions | Built | Done | Done — reads latest `Child` + `Meal` counts; pending callout gated on real `pending` meal | None |
+| Header + hero + plan list + quick actions | ✅ Built | ✅ Done | ✅ Done — reads latest `Child` + `Meal` counts; pending callout gated on real `pending` meal | None |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| "Time to measure Maya" CTA banner | Missing | — | — | Banner not rendered; gated on `lastMeasuredAt` field that doesn't exist yet |
+| "Time to measure Maya" CTA banner | ❌ Missing | — | — | Banner not rendered; gated on `lastMeasuredAt` field that doesn't exist yet |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Profile-completion ring (`18% → Keep building taste profile`) | Missing | — | — | Card not rendered; should now be wirable since `TasteRating` exists — count rated/total via `db.tasteRating.count` |
+| Profile-completion ring (`18% → Keep building taste profile`) | ❌ Missing | — | — | Card not rendered; should now be wirable since `TasteRating` exists — count rated/total via `db.tasteRating.count` |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| "Veggie of the day" card | Missing | — | — | Card not rendered; needs `Veggie` content table or static content file |
+| "Veggie of the day" card | ❌ Missing | — | — | Card not rendered; needs `Veggie` content table or static content file |
 
 ---
 
@@ -72,15 +74,15 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Viewfinder + reveal animation | Built | Partial — fixed SVG plate (no real camera/file upload); no dancing-veggies AR overlay | Partial — `Meal` + `DetectedFood` rows are written, but the foods themselves are still hardcoded `SNAP_DETECTION` from `mockData` | Real input (file upload or `getUserMedia`); Anthropic SDK vision call to populate detected foods; render AR overlay on healthy-food detection |
+| Viewfinder + reveal animation | ✅ Built | 🟡 Partial — fixed SVG plate (no real camera/file upload); no dancing-veggies AR overlay | 🟡 Partial — `Meal` + `DetectedFood` rows are written, but the foods themselves are still hardcoded `SNAP_DETECTION` from `mockData` | Real input (file upload or `getUserMedia`); Anthropic SDK vision call to populate detected foods; render AR overlay on healthy-food detection |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Confirm (detected foods) | Built | Done | Done — reads `Meal.detected` (phase=before) by `mealId` | None — closes the loop once vision API replaces `SNAP_DETECTION` |
+| Confirm (detected foods) | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=before) by `mealId` | None — closes the loop once vision API replaces `SNAP_DETECTION` |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Meal Analysis | Built | Done | Done — reads `Meal.detected` (phase=after); balance/nutrients/recommendation now computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated) |
+| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); balance/nutrients/recommendation now computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated) |
 
 ---
 
@@ -88,7 +90,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Text-entry meal logger | Missing | — | — | Whole screen unbuilt; needs LLM extraction call + same `Meal`/`DetectedFood` write path |
+| Text-entry meal logger | ❌ Missing | — | — | Whole screen unbuilt; needs LLM extraction call + same `Meal`/`DetectedFood` write path |
 
 ---
 
@@ -96,7 +98,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Week strip + generator + recipes + supplement card | Stub | Coming-soon placeholder | — | Whole tab unbuilt; needs `MealPlan` + `Recipe` + `SupplementRec` tables and a generator that consumes the (now-available) taste graph |
+| Week strip + generator + recipes + supplement card | ⏳ Stub | ⏳ Coming-soon placeholder | — | Whole tab unbuilt; needs `MealPlan` + `Recipe` + `SupplementRec` tables and a generator that consumes the (now-available) taste graph |
 
 ---
 
@@ -104,7 +106,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Stat cards, taste graph bars, balance history, growth chart, peer comparison, veggie collection | Stub | Coming-soon placeholder | — | Whole tab unbuilt; growth chart needs WHO percentile data + `GrowthMeasurement` table; balance history needs analyzed-meal aggregates; **taste graph bars are now data-ready** via `TasteRating` |
+| Stat cards, taste graph bars, balance history, growth chart, peer comparison, veggie collection | ⏳ Stub | ⏳ Coming-soon placeholder | — | Whole tab unbuilt; growth chart needs WHO percentile data + `GrowthMeasurement` table; balance history needs analyzed-meal aggregates; **taste graph bars are now data-ready** via `TasteRating` |
 
 ---
 
@@ -112,7 +114,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Unlockable veggie characters + stories | Stub | Coming-soon placeholder | — | Whole tab unbuilt; needs static content file for veggie cast + `UnlockedVeggie` per-child table |
+| Unlockable veggie characters + stories | ⏳ Stub | ⏳ Coming-soon placeholder | — | Whole tab unbuilt; needs static content file for veggie cast + `UnlockedVeggie` per-child table |
 
 ---
 
@@ -147,6 +149,6 @@ The big personalization layer is now in place. Buckets ranked by leverage:
 
 ## Status legend
 
-- **Status**: `Built` (live in app), `Partial` (live but incomplete), `Stub` (Coming-soon placeholder), `Missing` (not implemented)
-- **Design Fidelity**: `Done` only if it matches the prototype's design tokens *and* screen-level layout. `Partial` if any prototype components are missing.
-- **Database Connection**: `Done` only if there is an active Prisma call hitting Postgres in the live code path. Mock data and localStorage do not count.
+- **Status**: ✅ `Built` (live in app), 🟡 `Partial` (live but incomplete), ⏳ `Stub` (Coming-soon placeholder), ❌ `Missing` (not implemented)
+- **Design Fidelity**: ✅ `Done` only if it matches the prototype's design tokens *and* screen-level layout. 🟡 `Partial` if any prototype components are missing.
+- **Database Connection**: ✅ `Done` only if there is an active Prisma call hitting Postgres in the live code path. Mock data and localStorage do not count.
