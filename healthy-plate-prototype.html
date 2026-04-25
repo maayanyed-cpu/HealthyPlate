@@ -1,0 +1,3084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Healthy Plate — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5F1E8;
+    --cream-soft: #FAF7F0;
+    --surface: #FFFFFF;
+    --sage-deep: #4A6B5F;
+    --sage: #5A8073;
+    --sage-soft: #A8BFA8;
+    --sage-pale: #DCE8DD;
+    --moss: #97BC62;
+    --carrot: #D88463;
+    --carrot-soft: #F0C4A8;
+    --tomato: #C95C4D;
+    --gold: #E5B96A;
+    --berry: #8B5A6B;
+    --ink: #2D3A36;
+    --ink-soft: #6B7670;
+    --ink-mute: #A0A8A4;
+    --border: #E8E5DD;
+    --border-soft: #F0EDE5;
+    --shadow-sm: 0 1px 2px rgba(45,58,54,0.04), 0 2px 8px rgba(45,58,54,0.04);
+    --shadow-md: 0 4px 12px rgba(45,58,54,0.06), 0 12px 32px rgba(45,58,54,0.08);
+    --shadow-lg: 0 16px 48px rgba(45,58,54,0.12);
+    --radius-sm: 12px;
+    --radius: 20px;
+    --radius-lg: 28px;
+    --radius-xl: 36px;
+    --r-love: #C95C4D; --r-love-bg: #F8E2DE;
+    --r-ok: #5A8073; --r-ok-bg: #DCE8DD;
+    --r-meh: #E5B96A; --r-meh-bg: #F4E5C7;
+    --r-no: #D88463; --r-no-bg: #F0DFD2;
+    --r-hardno: #8B3A2D; --r-hardno-bg: #EAD5CF;
+    --r-unsure: #A0A8A4; --r-unsure-bg: #EFEEEA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: linear-gradient(135deg, #EFEAD8 0%, #E8E5D4 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding: 32px 16px 80px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 24px;
+  }
+
+  .banner { width: 100%; max-width: 920px; text-align: center; margin-bottom: 8px; }
+  .banner-eyebrow { font-family: 'Fraunces', serif; font-size: 13px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--sage-deep); margin-bottom: 6px; font-weight: 500; }
+  .banner-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500;
+    color: var(--ink); letter-spacing: -0.01em; }
+  .banner-sub { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
+
+  .app {
+    width: 100%; max-width: 420px;
+    background: var(--cream-soft);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden; position: relative;
+    min-height: 820px;
+    display: flex; flex-direction: column;
+  }
+
+  .topbar { height: 48px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; color: var(--ink); font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .topbar .right { display: flex; gap: 6px; align-items: center; opacity: 0.65; }
+  .topbar svg { display: block; }
+
+  .screen { flex: 1; display: none; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden; padding-bottom: 24px; }
+  .screen.active { display: flex; }
+  .screen::-webkit-scrollbar { width: 6px; }
+  .screen::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .bottom-nav {
+    flex-shrink: 0; background: var(--surface);
+    border-top: 1px solid var(--border-soft);
+    padding: 12px 16px 20px;
+    display: flex; justify-content: space-around; align-items: center;
+  }
+  .nav-item { background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 6px 10px;
+    color: var(--ink-mute); font-family: inherit; font-size: 11px; font-weight: 500;
+    transition: color 0.2s; }
+  .nav-item.active { color: var(--sage-deep); }
+  .nav-item svg { width: 22px; height: 22px; }
+  .nav-snap {
+    background: var(--sage-deep); color: var(--cream-soft);
+    width: 56px; height: 56px; border-radius: 50%;
+    margin-top: -16px;
+    box-shadow: 0 6px 16px rgba(74,107,95,0.35);
+    transition: transform 0.2s;
+  }
+  .nav-snap:hover { transform: scale(1.05); }
+  .nav-snap svg { width: 26px; height: 26px; color: var(--cream-soft); }
+  .nav-snap span { display: none; }
+
+  /* Onboarding */
+  .onboarding { background: var(--cream-soft); padding: 32px 28px 28px; flex: 1; display: flex; flex-direction: column; }
+  .ob-progress { display: flex; gap: 6px; margin-bottom: 28px; }
+  .ob-dot { flex: 1; height: 3px; background: var(--border); border-radius: 2px; transition: background 0.3s; }
+  .ob-dot.active { background: var(--sage-deep); }
+  .ob-hero { text-align: center; margin-bottom: 28px; }
+  .ob-mark { width: 64px; height: 64px; margin: 0 auto 16px;
+    background: var(--sage-pale); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; }
+  .ob-eyebrow { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--sage-deep); margin-bottom: 10px; font-weight: 600; }
+  .ob-title { font-family: 'Fraunces', serif; font-size: 28px; line-height: 1.18;
+    font-weight: 500; color: var(--ink); letter-spacing: -0.015em; margin-bottom: 10px; }
+  .ob-title em { font-style: italic; color: var(--sage-deep); }
+  .ob-sub { font-size: 14px; color: var(--ink-soft); line-height: 1.5;
+    max-width: 320px; margin: 0 auto; }
+
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 600;
+    color: var(--ink); margin-bottom: 8px; letter-spacing: 0.01em; }
+  .field input, .field textarea {
+    width: 100%; padding: 14px 16px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 15px; color: var(--ink);
+    outline: none; transition: border-color 0.2s; resize: none;
+  }
+  .field textarea { min-height: 70px; line-height: 1.4; }
+  .field input:focus, .field textarea:focus { border-color: var(--sage); }
+
+  .age-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .age-pill {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 0;
+    cursor: pointer; font-family: inherit; font-size: 15px;
+    font-weight: 600; color: var(--ink); transition: all 0.18s;
+  }
+  .age-pill:hover { border-color: var(--sage-soft); }
+  .age-pill.selected {
+    background: var(--sage-deep); color: var(--cream-soft); border-color: var(--sage-deep);
+  }
+
+  .field-section-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--sage-deep);
+    margin-bottom: 10px; margin-top: 4px;
+  }
+  .field-section-label small {
+    text-transform: none; letter-spacing: 0;
+    color: var(--ink-mute); font-weight: 500; font-size: 11px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .chip {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 100px; padding: 8px 14px;
+    cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+    transition: all 0.18s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip:hover { border-color: var(--sage-soft); }
+  .chip.selected {
+    background: var(--sage-deep); color: var(--cream-soft); border-color: var(--sage-deep);
+  }
+  .chip.warn.selected { background: var(--carrot); border-color: var(--carrot); }
+
+  .habits-list { display: flex; flex-direction: column; gap: 10px; }
+  .habit-row {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: all 0.18s;
+    text-align: left; font-family: inherit; width: 100%;
+  }
+  .habit-row:hover { border-color: var(--sage-soft); }
+  .habit-row.selected { border-color: var(--sage-deep); background: var(--sage-pale); }
+  .habit-emoji { width: 36px; height: 36px; background: var(--cream); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .habit-row.selected .habit-emoji { background: var(--surface); }
+  .habit-text { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .habit-text small { display: block; font-weight: 400; color: var(--ink-soft);
+    margin-top: 2px; font-size: 12px; }
+
+  .btn-primary {
+    width: 100%; background: var(--sage-deep); color: var(--cream-soft);
+    border: none; border-radius: var(--radius); padding: 16px 24px;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary:hover { background: var(--ink); transform: translateY(-1px); }
+  .btn-secondary {
+    width: 100%; background: transparent; color: var(--ink-soft);
+    border: none; padding: 12px;
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    cursor: pointer; text-align: center;
+  }
+  .btn-secondary:hover { color: var(--ink); }
+  .btn-stack { margin-top: auto; padding-top: 18px;
+    display: flex; flex-direction: column; gap: 4px; }
+
+  /* Home */
+  .home-header { padding: 12px 24px 8px; display: flex;
+    justify-content: space-between; align-items: center; }
+  .greeting { font-size: 13px; color: var(--ink-soft); }
+  .child-pill {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 100px; padding: 4px 6px 4px 12px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer;
+  }
+  .child-avatar {
+    width: 24px; height: 24px; border-radius: 50%; background: var(--sage-pale);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--sage-deep); font-weight: 700;
+  }
+
+  .hero-card {
+    margin: 8px 20px 14px; padding: 22px 22px 24px;
+    background: linear-gradient(150deg, #4A6B5F 0%, #3A5648 100%);
+    border-radius: var(--radius-lg);
+    color: var(--cream-soft);
+    position: relative; overflow: hidden;
+  }
+  .hero-card::before { content: ''; position: absolute;
+    width: 180px; height: 180px; background: rgba(255,255,255,0.04);
+    border-radius: 50%; top: -40px; right: -50px; }
+  .hero-card::after { content: ''; position: absolute;
+    width: 120px; height: 120px; background: rgba(255,255,255,0.03);
+    border-radius: 50%; bottom: -30px; right: 30px; }
+  .hero-eyebrow { font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; opacity: 0.7; margin-bottom: 10px; font-weight: 500; }
+  .hero-title { font-family: 'Fraunces', serif; font-size: 22px;
+    font-weight: 500; line-height: 1.25; margin-bottom: 16px;
+    position: relative; z-index: 1; }
+  .hero-stats { display: flex; gap: 24px; position: relative; z-index: 1; }
+  .hero-stat-num { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1; }
+  .hero-stat-label { font-size: 11px; opacity: 0.75; margin-top: 4px; }
+
+  /* Pending meal callout */
+  .pending-meal {
+    margin: 0 20px 14px;
+    padding: 14px 16px;
+    background: linear-gradient(120deg, var(--carrot), #E8946A);
+    color: #FFF;
+    border-radius: var(--radius);
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(216,132,99,0.25);
+  }
+  .pending-meal-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+  }
+  .pending-meal-text { flex: 1; }
+  .pending-meal-title { font-size: 13px; font-weight: 700; }
+  .pending-meal-desc { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+  .pending-meal-arrow svg { width: 18px; height: 18px; opacity: 0.85; }
+
+  /* Profile-progress card */
+  .profile-card {
+    margin: 0 20px 14px; padding: 18px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    display: flex; gap: 16px; align-items: center;
+    cursor: pointer; transition: border-color 0.18s;
+  }
+  .profile-card:hover { border-color: var(--sage-soft); }
+  .profile-ring { flex-shrink: 0; width: 60px; height: 60px; position: relative; }
+  .profile-ring svg { transform: rotate(-90deg); }
+  .profile-ring-num { position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 600;
+    font-size: 14px; color: var(--sage-deep); }
+  .profile-card-text { flex: 1; min-width: 0; }
+  .profile-card-title { font-family: 'Fraunces', serif;
+    font-size: 15px; font-weight: 600; color: var(--ink); }
+  .profile-card-desc { font-size: 12px; color: var(--ink-soft);
+    margin-top: 3px; line-height: 1.4; }
+  .profile-card-arrow { color: var(--sage-deep); flex-shrink: 0; }
+
+  /* Quick actions row */
+  .quick-actions {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; padding: 0 20px 4px;
+  }
+  .quick-action {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: left;
+    font-family: inherit;
+  }
+  .quick-action:hover { border-color: var(--sage-soft); transform: translateY(-1px); }
+  .quick-action .qa-icon { width: 32px; height: 32px;
+    border-radius: 10px;
+    background: var(--sage-pale);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sage-deep); margin-bottom: 4px; }
+  .quick-action.warm .qa-icon { background: #F5E5D5; color: #8B5A2B; }
+  .quick-action .qa-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .quick-action .qa-desc { font-size: 11px; color: var(--ink-soft); line-height: 1.3; }
+
+  .section-head {
+    padding: 14px 24px 10px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .section-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; color: var(--ink); }
+  .section-link { font-size: 12px; color: var(--sage-deep); font-weight: 600;
+    cursor: pointer; background: none; border: none; font-family: inherit; }
+
+  .plan-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+  .plan-item {
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .plan-meal-icon { width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; background: var(--cream); font-size: 22px; }
+  .plan-meal-info { flex: 1; min-width: 0; }
+  .plan-meal-time { font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--ink-mute); font-weight: 600; }
+  .plan-meal-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+  .plan-meal-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .meal-tag { font-size: 10px; background: var(--sage-pale);
+    color: var(--sage-deep); padding: 2px 8px; border-radius: 100px; font-weight: 600; }
+  .meal-tag.warm { background: #F5E5D5; color: #8B5A2B; }
+  .meal-tag.berry { background: #F0DEE3; color: var(--berry); }
+  .plan-meal-status {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .plan-meal-status.done { background: var(--sage-deep);
+    border-color: var(--sage-deep); color: var(--cream-soft); }
+  .plan-meal-status.partial { background: var(--gold); border-color: var(--gold); color: var(--ink); font-size: 10px; font-weight: 700; }
+
+  .insight-card {
+    margin: 8px 20px 0; background: var(--surface);
+    border-radius: var(--radius); padding: 18px 20px;
+    border: 1px solid var(--border-soft);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .insight-veggie { flex-shrink: 0; width: 56px; height: 56px; }
+  .insight-text { flex: 1; }
+  .insight-name { font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .insight-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+
+  /* ====== SNAP SCREEN ====== */
+  .snap-screen { background: #1A201E; color: var(--cream-soft);
+    position: relative; padding-bottom: 0 !important; }
+  .snap-header {
+    padding: 16px 20px; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .snap-close, .snap-flash {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.1);
+    border: none; border-radius: 50%;
+    color: var(--cream-soft); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Before/After mode toggle */
+  .snap-mode {
+    margin: 0 20px 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 100px;
+    padding: 4px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+  .snap-mode-btn {
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.6);
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 8px 0;
+    border-radius: 100px;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .snap-mode-btn.active {
+    background: var(--cream-soft);
+    color: var(--ink);
+  }
+  .snap-mode-btn .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; opacity: 0.5;
+  }
+  .snap-mode-btn.active .dot { opacity: 1; background: var(--sage-deep); }
+
+  .viewfinder {
+    margin: 8px 20px 0; aspect-ratio: 4/5;
+    background: linear-gradient(135deg, #2A3530 0%, #4A6B5F 100%);
+    border-radius: var(--radius-lg);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .plate-svg { width: 80%; height: auto; }
+  .detect-box {
+    position: absolute;
+    border: 2px solid #B8E1B8;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+    transition: opacity 0.4s;
+    opacity: 0;
+  }
+  .detect-box.show { opacity: 1; }
+  .detect-label {
+    position: absolute;
+    background: #B8E1B8; color: #1A201E;
+    padding: 2px 8px; border-radius: 6px;
+    font-size: 10px; font-weight: 700;
+    top: -22px; left: 0; white-space: nowrap;
+  }
+  .scanline {
+    position: absolute; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #B8E1B8, transparent);
+    box-shadow: 0 0 12px #B8E1B8;
+    top: 0; animation: scan 2s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0%, 100% { top: 5%; opacity: 0.7; }
+    50% { top: 95%; opacity: 1; }
+  }
+  .scanline.hide { display: none; }
+
+  /* Dancing veggies AR overlay */
+  .dancing-veggies {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .dancing-veggies.show { opacity: 1; }
+  .dv-char {
+    position: absolute;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .dv-char:nth-child(2) { animation-delay: 0.15s; }
+  .dv-char:nth-child(3) { animation-delay: 0.3s; }
+  .dv-char:nth-child(4) { animation-delay: 0.45s; }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-8px) rotate(4deg); }
+  }
+  .dv-sparkle {
+    position: absolute;
+    width: 16px; height: 16px;
+    background: radial-gradient(circle, #FFE9A8 30%, transparent 70%);
+    border-radius: 50%;
+    animation: sparkle 1.4s ease-in-out infinite;
+  }
+  @keyframes sparkle {
+    0%, 100% { transform: scale(0.5); opacity: 0.4; }
+    50% { transform: scale(1.3); opacity: 1; }
+  }
+  .dv-banner {
+    position: absolute;
+    bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.95);
+    color: var(--ink);
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 11px; font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .snap-status {
+    text-align: center; padding: 18px 20px 14px;
+    font-size: 13px; color: rgba(255,255,255,0.7);
+  }
+  .snap-status strong { color: var(--cream-soft); font-weight: 600; }
+  .shutter-wrap {
+    display: flex; justify-content: center; align-items: center;
+    gap: 36px; padding: 12px 20px 36px;
+  }
+  .shutter {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--cream-soft);
+    border: 4px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    box-shadow: 0 0 0 6px rgba(255,255,255,0.05);
+    transition: transform 0.15s;
+  }
+  .shutter:hover { transform: scale(0.95); }
+  .shutter-side {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: rgba(255,255,255,0.08); border: none;
+    color: var(--cream-soft); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Confirm */
+  .confirm-screen { background: var(--cream-soft); }
+  .confirm-header { padding: 18px 24px 8px;
+    display: flex; justify-content: space-between; align-items: center; }
+  .confirm-back {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-soft); display: flex; align-items: center; gap: 4px;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+  }
+  .confirm-photo {
+    margin: 12px 24px 20px; aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #2A3530 0%, #4A6B5F 100%);
+    border-radius: var(--radius);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .confirm-title {
+    padding: 0 24px 4px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 500; color: var(--ink);
+  }
+  .confirm-sub { padding: 0 24px 16px; font-size: 13px; color: var(--ink-soft); }
+  .detected-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+  .detected-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .detected-emoji {
+    width: 38px; height: 38px; background: var(--cream);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .detected-info { flex: 1; }
+  .detected-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .detected-portion { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .confidence {
+    font-size: 11px; font-weight: 600; color: var(--sage-deep);
+    background: var(--sage-pale); padding: 3px 8px; border-radius: 100px;
+  }
+  .confirm-cta { padding: 20px 20px 8px; }
+
+  /* ====== MEAL ANALYSIS SCREEN ====== */
+  .ma-header { padding: 16px 24px 8px; }
+  .ma-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; color: var(--ink); }
+  .ma-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+  .ma-comparison {
+    margin: 14px 20px 0;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .ma-photo {
+    aspect-ratio: 1/1;
+    background: linear-gradient(135deg, #2A3530 0%, #4A6B5F 100%);
+    border-radius: var(--radius);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ma-photo-label {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(255,255,255,0.95);
+    color: var(--ink);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .ma-balance-card {
+    margin: 16px 20px 0;
+    background: linear-gradient(150deg, #4A6B5F 0%, #3A5648 100%);
+    color: var(--cream-soft);
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 24px;
+    position: relative; overflow: hidden;
+  }
+  .ma-balance-card::before { content: ''; position: absolute;
+    width: 180px; height: 180px; background: rgba(255,255,255,0.04);
+    border-radius: 50%; top: -50px; right: -60px; }
+  .ma-balance-row {
+    display: flex; align-items: center; gap: 18px;
+    position: relative; z-index: 1;
+  }
+  .ma-score-ring {
+    flex-shrink: 0; width: 84px; height: 84px;
+    position: relative;
+  }
+  .ma-score-ring svg { transform: rotate(-90deg); }
+  .ma-score-num {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif;
+  }
+  .ma-score-num .big { font-size: 28px; font-weight: 600; line-height: 1; }
+  .ma-score-num .small { font-size: 10px; opacity: 0.7; margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 0.1em; }
+  .ma-balance-text { flex: 1; }
+  .ma-balance-eyebrow { font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; opacity: 0.75; font-weight: 500; }
+  .ma-balance-title { font-family: 'Fraunces', serif;
+    font-size: 18px; font-weight: 500; line-height: 1.25;
+    margin-top: 6px; }
+
+  .ma-section { margin: 18px 20px 0; }
+  .ma-section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600; color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .nutrient-bars {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .nutrient-row {
+    display: flex; align-items: center; gap: 12px; padding: 6px 0;
+  }
+  .nutrient-name { width: 70px; font-size: 12px; font-weight: 600; color: var(--ink); }
+  .nutrient-bar-track { flex: 1; height: 8px; background: var(--border-soft);
+    border-radius: 4px; overflow: hidden; position: relative; }
+  .nutrient-bar-track::after {
+    content: ''; position: absolute;
+    top: 0; bottom: 0;
+    left: 80%;
+    width: 1.5px;
+    background: var(--ink-mute);
+    opacity: 0.5;
+  }
+  .nutrient-bar-fill { height: 100%; border-radius: 4px; }
+  .nutrient-bar-fill.good { background: linear-gradient(90deg, var(--sage), var(--moss)); }
+  .nutrient-bar-fill.med { background: linear-gradient(90deg, var(--gold), var(--carrot)); }
+  .nutrient-bar-fill.low { background: var(--carrot-soft); }
+  .nutrient-pct { font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    width: 40px; text-align: right; }
+
+  .ate-grid {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .ate-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 0;
+  }
+  .ate-row + .ate-row { border-top: 1px dashed var(--border-soft); padding-top: 10px; margin-top: 4px; }
+  .ate-emoji { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .ate-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .ate-amount { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+  .ate-percent { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; color: var(--sage-deep); width: 40px; text-align: right; }
+  .ate-percent.low { color: var(--carrot); }
+
+  /* Recommendation card */
+  .ma-rec-card {
+    margin: 18px 20px 0;
+    background: linear-gradient(135deg, #F4E5C7, #E8D5A8);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex; gap: 14px;
+    align-items: flex-start;
+  }
+  .ma-rec-icon {
+    width: 38px; height: 38px;
+    background: var(--ink);
+    color: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  .ma-rec-text { flex: 1; }
+  .ma-rec-eyebrow { font-size: 10px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #8B5A2B; font-weight: 700; }
+  .ma-rec-body { font-family: 'Fraunces', serif;
+    font-size: 15px; font-weight: 500; color: var(--ink);
+    line-height: 1.4; margin-top: 4px; }
+  .ma-rec-actions {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .ma-rec-pill {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(0,0,0,0.06);
+    color: var(--ink);
+    padding: 5px 10px;
+    border-radius: 100px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+  }
+
+  .ma-cta { padding: 20px 20px 8px; }
+
+  /* ====== DESCRIBE MEAL SCREEN ====== */
+  .dm-screen { background: var(--cream-soft); }
+  .dm-header {
+    padding: 18px 24px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dm-title-block { padding: 6px 24px 16px; }
+  .dm-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; color: var(--ink); }
+  .dm-sub { font-size: 13px; color: var(--ink-soft); margin-top: 4px; line-height: 1.4; }
+
+  .dm-time-pills {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; padding: 0 20px 16px;
+  }
+  .time-pill {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    transition: all 0.18s;
+    text-align: center;
+  }
+  .time-pill .ic { display: block; font-size: 18px; margin-bottom: 2px; }
+  .time-pill.active {
+    background: var(--ink);
+    color: var(--cream-soft);
+    border-color: var(--ink);
+  }
+
+  .dm-textarea {
+    margin: 0 20px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.5;
+    width: calc(100% - 40px);
+    min-height: 120px;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s;
+  }
+  .dm-textarea:focus { border-color: var(--sage); }
+
+  .dm-detected {
+    margin: 14px 20px 0;
+    padding: 14px 16px;
+    background: var(--sage-pale);
+    border-radius: var(--radius);
+  }
+  .dm-detected-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--sage-deep);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .dm-detected-row {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .dm-tag {
+    background: var(--surface);
+    border: 1px solid var(--sage-soft);
+    color: var(--sage-deep);
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ====== TASTE TEST ====== */
+  .tt-screen { background: var(--cream-soft); }
+  .tt-topbar {
+    position: sticky; top: 0;
+    background: var(--cream-soft);
+    z-index: 5;
+    padding: 14px 20px 14px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .tt-topbar-row {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .tt-back {
+    width: 36px; height: 36px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--ink);
+  }
+  .tt-title { font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600; color: var(--ink);
+    flex: 1; text-align: center; }
+  .tt-save { background: none; border: none;
+    color: var(--sage-deep); font-family: inherit;
+    font-size: 13px; font-weight: 600; cursor: pointer; }
+  .tt-progress-wrap { display: flex; align-items: center; gap: 12px; }
+  .tt-progress-bar { flex: 1; height: 8px;
+    background: var(--border); border-radius: 4px; overflow: hidden; }
+  .tt-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--sage), var(--moss));
+    border-radius: 4px; transition: width 0.4s;
+  }
+  .tt-progress-num {
+    font-family: 'Fraunces', serif;
+    font-size: 15px; font-weight: 600;
+    color: var(--ink); flex-shrink: 0;
+  }
+  .tt-progress-num span { color: var(--ink-mute); font-weight: 500; font-size: 13px; }
+  .tt-hint { font-size: 11px; color: var(--ink-soft); margin-top: 8px; text-align: center; }
+  .tt-hint strong { color: var(--sage-deep); font-weight: 600; }
+
+  .tt-categories {
+    position: sticky; top: 0;
+    background: var(--cream-soft);
+    padding: 14px 20px 6px;
+    overflow-x: auto; scrollbar-width: none;
+    z-index: 4;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .tt-categories::-webkit-scrollbar { display: none; }
+  .tt-cat-row { display: flex; gap: 6px; min-width: max-content; }
+  .tt-cat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 100px; padding: 7px 12px;
+    cursor: pointer; font-family: inherit;
+    font-size: 12px; font-weight: 500; color: var(--ink-soft);
+    white-space: nowrap; transition: all 0.18s;
+  }
+  .tt-cat:hover { border-color: var(--sage-soft); }
+  .tt-cat.active { background: var(--ink); color: var(--cream-soft); border-color: var(--ink); }
+  .tt-cat-count { margin-left: 6px; color: var(--ink-mute); font-size: 10px; font-weight: 600; }
+  .tt-cat.active .tt-cat-count { color: rgba(255,255,255,0.55); }
+
+  .tt-list { padding: 12px 20px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .food-card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 14px 14px 12px;
+  }
+  .food-card.rated { border-color: var(--sage-soft); }
+  .food-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .food-emoji {
+    width: 42px; height: 42px;
+    background: var(--cream);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .food-name { font-size: 14px; font-weight: 600; color: var(--ink); flex: 1; }
+  .food-rated-badge {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 3px 8px; border-radius: 100px;
+  }
+  .food-rated-badge.love { background: var(--r-love-bg); color: var(--r-love); }
+  .food-rated-badge.ok { background: var(--r-ok-bg); color: var(--r-ok); }
+  .food-rated-badge.meh { background: var(--r-meh-bg); color: #8B5A2B; }
+  .food-rated-badge.no { background: var(--r-no-bg); color: var(--r-no); }
+  .food-rated-badge.hardno { background: var(--r-hardno-bg); color: var(--r-hardno); }
+  .food-rated-badge.unsure { background: var(--r-unsure-bg); color: var(--ink-soft); }
+  .rating-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .rating-btn {
+    background: var(--cream);
+    border: 1.5px solid transparent;
+    border-radius: 12px;
+    padding: 8px 4px 6px;
+    cursor: pointer; font-family: inherit;
+    text-align: center; transition: all 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .rating-btn:hover { background: var(--cream-soft); }
+  .rating-btn .ric { font-size: 16px; line-height: 1; }
+  .rating-btn .rlbl { font-size: 10px; color: var(--ink-soft); font-weight: 600; }
+  .rating-btn.love.selected { background: var(--r-love-bg); border-color: var(--r-love); }
+  .rating-btn.love.selected .rlbl { color: var(--r-love); }
+  .rating-btn.ok.selected { background: var(--r-ok-bg); border-color: var(--r-ok); }
+  .rating-btn.ok.selected .rlbl { color: var(--r-ok); }
+  .rating-btn.meh.selected { background: var(--r-meh-bg); border-color: var(--r-meh); }
+  .rating-btn.meh.selected .rlbl { color: #8B5A2B; }
+  .rating-btn.no.selected { background: var(--r-no-bg); border-color: var(--r-no); }
+  .rating-btn.no.selected .rlbl { color: var(--r-no); }
+  .rating-btn.hardno.selected { background: var(--r-hardno-bg); border-color: var(--r-hardno); }
+  .rating-btn.hardno.selected .rlbl { color: var(--r-hardno); }
+  .rating-btn.unsure.selected { background: var(--r-unsure-bg); border-color: var(--r-unsure); }
+  .rating-btn.unsure.selected .rlbl { color: var(--ink-soft); }
+
+  .tt-footer { position: sticky; bottom: 0;
+    background: var(--cream-soft);
+    padding: 12px 20px 18px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .tt-milestone {
+    margin: 4px 20px 4px; padding: 12px 14px;
+    background: linear-gradient(135deg, var(--sage-pale), #C8DDC9);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; gap: 12px;
+    font-size: 12px; color: var(--sage-deep);
+  }
+  .tt-milestone .icon { font-size: 18px; }
+  .tt-milestone strong { font-family: 'Fraunces', serif; font-weight: 600; }
+
+  /* ====== INSIGHTS ====== */
+  .insights-header { padding: 16px 24px 8px; }
+  .insights-title {
+    font-family: 'Fraunces', serif;
+    font-size: 26px; font-weight: 500;
+    color: var(--ink); letter-spacing: -0.01em;
+  }
+  .insights-sub { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .stat-row { padding: 16px 20px 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 16px;
+  }
+  .stat-card.dark { background: var(--ink); color: var(--cream-soft); border-color: var(--ink); }
+  .stat-label { font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--ink-soft); font-weight: 600; }
+  .stat-card.dark .stat-label { color: rgba(255,255,255,0.6); }
+  .stat-num { font-family: 'Fraunces', serif;
+    font-size: 32px; font-weight: 500; margin-top: 6px; line-height: 1; }
+  .stat-trend { font-size: 11px; color: var(--sage-deep); margin-top: 8px; font-weight: 600; }
+  .stat-card.dark .stat-trend { color: var(--sage-soft); }
+
+  .taste-graph {
+    margin: 16px 20px 0;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .tg-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .tg-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; color: var(--ink); }
+  .tg-legend { font-size: 11px; color: var(--ink-soft); }
+
+  .veggie-bar { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .veggie-bar-name { width: 78px; font-size: 12px; font-weight: 600; color: var(--ink); flex-shrink: 0; }
+  .veggie-bar-track { flex: 1; height: 8px;
+    background: var(--border-soft); border-radius: 4px; overflow: hidden; position: relative; }
+  .veggie-bar-fill { height: 100%; border-radius: 4px; background: var(--sage); }
+  .veggie-bar-fill.high { background: linear-gradient(90deg, #5A8073, #97BC62); }
+  .veggie-bar-fill.med { background: linear-gradient(90deg, #E5B96A, #D88463); }
+  .veggie-bar-fill.low { background: var(--carrot-soft); }
+  .veggie-bar-pct { font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* History timeline */
+  .history-card {
+    margin: 16px 20px 0;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 20px 18px 16px;
+  }
+  .history-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 16px;
+  }
+  .history-range {
+    display: flex; gap: 4px;
+    background: var(--cream);
+    padding: 3px;
+    border-radius: 100px;
+  }
+  .history-range button {
+    background: none; border: none; cursor: pointer;
+    padding: 4px 10px; font-size: 11px; font-weight: 600;
+    color: var(--ink-soft);
+    border-radius: 100px;
+    font-family: inherit;
+  }
+  .history-range button.active {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .history-chart {
+    height: 100px;
+    display: flex; align-items: flex-end; gap: 4px;
+    padding: 0 2px 8px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .history-bar {
+    flex: 1; min-width: 0;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, var(--sage), var(--sage-deep));
+    position: relative;
+  }
+  .history-bar.med { background: linear-gradient(180deg, var(--gold), var(--carrot)); }
+  .history-bar.low { background: var(--carrot-soft); }
+  .history-axis {
+    display: flex; justify-content: space-between;
+    margin-top: 6px; padding: 0 2px;
+    font-size: 10px; color: var(--ink-mute);
+  }
+
+  .history-meta {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-top: 14px;
+  }
+  .history-meta-cell {
+    border-left: 2px solid var(--sage-soft);
+    padding-left: 8px;
+  }
+  .history-meta-cell.warm { border-color: var(--gold); }
+  .history-meta-cell.alt { border-color: var(--berry); }
+  .history-meta-num { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; color: var(--ink); }
+  .history-meta-lbl { font-size: 10px; color: var(--ink-soft); margin-top: 1px; line-height: 1.3; }
+
+  /* Veggie collection */
+  .veggie-collection {
+    margin: 16px 20px 0;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .vc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 14px; }
+  .vc-item { text-align: center; }
+  .vc-circle {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--cream); margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--border-soft);
+  }
+  .vc-item.unlocked .vc-circle { background: var(--sage-pale); border-color: var(--sage); }
+  .vc-item.locked .vc-circle { opacity: 0.4; }
+  .vc-name { font-size: 11px; font-weight: 600; color: var(--ink); margin-top: 6px; }
+  .vc-count { font-size: 10px; color: var(--ink-soft); margin-top: 1px; }
+  .vc-item.locked .vc-name { color: var(--ink-mute); }
+
+  /* Plan */
+  .plan-header { padding: 16px 24px 8px; }
+  .week-strip {
+    padding: 14px 20px 0; display: flex; gap: 6px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .week-strip::-webkit-scrollbar { display: none; }
+  .day-pill {
+    flex-shrink: 0; width: 44px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: 14px; padding: 10px 0; text-align: center;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .day-pill.active { background: var(--ink); color: var(--cream-soft); border-color: var(--ink); }
+  .day-day { font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; }
+  .day-num { font-family: 'Fraunces', serif;
+    font-size: 18px; font-weight: 500; margin-top: 2px; }
+
+  /* Plan generator card */
+  .plan-gen-card {
+    margin: 18px 20px 0;
+    background: var(--ink);
+    color: var(--cream-soft);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+  }
+  .plan-gen-eyebrow { font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; opacity: 0.65; font-weight: 500; }
+  .plan-gen-title { font-family: 'Fraunces', serif;
+    font-size: 20px; font-weight: 500; line-height: 1.25;
+    margin: 6px 0 14px; }
+
+  .plan-pref-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.12);
+  }
+  .plan-pref-row:last-of-type { border-bottom: none; }
+  .plan-pref-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.55);
+    font-weight: 600;
+    width: 90px;
+    flex-shrink: 0;
+  }
+  .plan-pref-val { flex: 1; font-size: 13px; font-weight: 500; }
+  .plan-pref-val small { display: block; opacity: 0.55; font-size: 11px; font-weight: 400; margin-top: 2px; }
+
+  .skill-dots {
+    display: inline-flex; gap: 3px; margin-left: 6px;
+  }
+  .skill-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+  }
+  .skill-dot.on { background: var(--sage-soft); }
+
+  .plan-gen-cta {
+    background: var(--cream-soft);
+    color: var(--ink);
+    border: none;
+    padding: 12px 18px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  .supp-card {
+    margin: 18px 20px 0;
+    background: linear-gradient(160deg, #E8946A 0%, #D88463 100%);
+    color: #FFF; border-radius: var(--radius-lg);
+    padding: 22px; position: relative; overflow: hidden;
+  }
+  .supp-card::before { content: ''; position: absolute;
+    width: 200px; height: 200px; background: rgba(255,255,255,0.06);
+    border-radius: 50%; top: -60px; right: -80px; }
+  .supp-eyebrow { font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; opacity: 0.85; font-weight: 500; }
+  .supp-title { font-family: 'Fraunces', serif; font-size: 22px;
+    font-weight: 500; line-height: 1.2; margin: 8px 0 12px;
+    position: relative; z-index: 1; }
+  .supp-list { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    position: relative; z-index: 1; }
+  .supp-pill { background: rgba(255,255,255,0.18); color: #FFF;
+    padding: 4px 10px; border-radius: 100px;
+    font-size: 11px; font-weight: 600; }
+  .supp-meta { display: flex; align-items: baseline; gap: 14px;
+    position: relative; z-index: 1; }
+  .supp-price { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; }
+  .supp-price-sub { font-size: 11px; opacity: 0.85; }
+  .supp-cta { background: #FFF; color: var(--carrot);
+    border: none; padding: 10px 18px; border-radius: 100px;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; margin-left: auto; position: relative; z-index: 1; }
+
+  .recipe-list {
+    padding: 12px 20px 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .recipe-item {
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 14px;
+    display: flex; gap: 14px; align-items: center;
+    cursor: pointer; transition: border-color 0.18s;
+  }
+  .recipe-item:hover { border-color: var(--sage-soft); }
+  .recipe-thumb {
+    width: 64px; height: 64px; border-radius: 14px;
+    background: var(--sage-pale); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .recipe-thumb.warm { background: #F5E5D5; }
+  .recipe-thumb.berry { background: #F0DEE3; }
+  .recipe-meta { flex: 1; }
+  .recipe-title-text { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .recipe-stats { display: flex; gap: 10px; margin-top: 6px;
+    font-size: 11px; color: var(--ink-soft); flex-wrap: wrap; }
+  .recipe-stats span { display: inline-flex; align-items: center; gap: 4px; }
+
+  .v-char { display: block; }
+
+  /* Growth tracker */
+  .growth-card {
+    margin: 16px 20px 0;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 20px 18px 18px;
+  }
+  .growth-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .growth-toggle {
+    display: flex; gap: 2px;
+    background: var(--cream);
+    padding: 3px;
+    border-radius: 100px;
+  }
+  .growth-toggle button {
+    background: none; border: none; cursor: pointer;
+    padding: 5px 12px;
+    font-size: 11px; font-weight: 600;
+    color: var(--ink-soft);
+    border-radius: 100px;
+    font-family: inherit;
+  }
+  .growth-toggle button.active {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .growth-current {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .growth-num {
+    font-family: 'Fraunces', serif;
+    font-size: 32px; font-weight: 600;
+    color: var(--ink); line-height: 1;
+  }
+  .growth-unit {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-left: 2px;
+    font-weight: 500;
+  }
+  .growth-percentile {
+    background: var(--sage-pale);
+    color: var(--sage-deep);
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11px; font-weight: 700;
+  }
+  .growth-trend {
+    font-size: 11px; color: var(--sage-deep);
+    font-weight: 600;
+  }
+  .growth-updated {
+    font-size: 11px; color: var(--ink-mute);
+    margin-left: auto;
+  }
+  .growth-chart-wrap {
+    background: var(--cream-soft);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px 6px;
+  }
+  .growth-view { display: none; }
+  .growth-view.active { display: block; }
+  .growth-chart {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .growth-legend {
+    display: flex; gap: 14px; margin-top: 10px;
+    font-size: 10px; color: var(--ink-soft);
+    padding: 0 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .growth-legend-dot {
+    display: inline-block;
+    width: 10px; height: 2px;
+    border-radius: 1px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .growth-legend-dot.maya { background: var(--sage-deep); height: 2.5px; }
+  .growth-legend-dot.median { background: var(--ink-mute); border-top: 1px dashed var(--ink-mute); height: 0; border-color: var(--ink-mute); }
+  .growth-legend-band {
+    display: inline-block;
+    width: 10px; height: 8px;
+    background: var(--sage-pale);
+    border-radius: 2px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .growth-update-btn {
+    margin-top: 14px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 9px 14px;
+    font-family: inherit;
+    font-size: 12px; font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    width: 100%;
+    justify-content: center;
+  }
+  .growth-update-btn:hover { border-color: var(--sage-soft); }
+
+  /* Peer comparison block inside growth card */
+  .peer-comparison {
+    margin-top: 16px;
+    padding: 14px 14px 12px;
+    background: var(--cream-soft);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-soft);
+  }
+  .pc-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .pc-icon {
+    width: 32px; height: 32px;
+    background: var(--sage-pale);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .pc-title {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .pc-sub {
+    font-size: 10px;
+    color: var(--ink-mute);
+    margin-top: 1px;
+  }
+  .pc-stat-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0;
+    border-top: 1px dashed var(--border);
+  }
+  .pc-stat-label {
+    width: 50px;
+    font-size: 11px; font-weight: 700;
+    color: var(--ink-soft);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .pc-stat-bar {
+    flex: 1; height: 8px;
+    background: var(--border-soft);
+    border-radius: 4px;
+    position: relative; overflow: visible;
+  }
+  .pc-stat-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--sage-soft), var(--sage));
+  }
+  .pc-stat-marker {
+    position: absolute; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--sage-deep);
+    border: 2.5px solid var(--cream-soft);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .pc-stat-text {
+    width: 110px; flex-shrink: 0;
+    font-size: 11px; font-weight: 600; color: var(--ink);
+    text-align: right;
+  }
+  .pc-badge {
+    flex: 1;
+    text-align: right;
+    font-size: 11px; font-weight: 700;
+    color: var(--sage-deep);
+  }
+  .pc-badge.ok::before {
+    content: '✓ ';
+    margin-right: 2px;
+  }
+
+  /* Monthly measurement CTA banner (home + growth) */
+  .measure-cta {
+    margin: 0 20px 14px;
+    padding: 14px 16px;
+    background: linear-gradient(120deg, var(--sage-deep), var(--sage));
+    color: var(--cream-soft);
+    border-radius: var(--radius);
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(74,107,95,0.22);
+    position: relative;
+    overflow: hidden;
+  }
+  .measure-cta::before {
+    content: '';
+    position: absolute;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    top: -40px; right: -30px;
+  }
+  .measure-cta-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+    position: relative; z-index: 1;
+  }
+  .measure-cta-text { flex: 1; position: relative; z-index: 1; }
+  .measure-cta-title { font-size: 13px; font-weight: 700; }
+  .measure-cta-desc { font-size: 11px; opacity: 0.85; margin-top: 2px; line-height: 1.3; }
+  .measure-cta-arrow svg { width: 18px; height: 18px; opacity: 0.85; position: relative; z-index: 1; }
+  .measure-cta-pulse {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    z-index: 2;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(229, 185, 106, 0.6); }
+    50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 6px rgba(229, 185, 106, 0); }
+  }
+
+  /* Inline measure reminder inside growth card */
+  .measure-inline {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, var(--sage-pale), #C8DDC9);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--sage-deep);
+  }
+  .measure-inline strong { font-family: 'Fraunces', serif; font-weight: 600; }
+
+  /* Two-column field for height + weight in onboarding */
+  .field-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 18px;
+  }
+  .field-row .field { margin-bottom: 0; }
+  .field-row label small {
+    color: var(--ink-mute);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+
+  /* Welcome */
+  .welcome-screen {
+    background: linear-gradient(180deg, #DCE8DD 0%, #FAF7F0 60%);
+    align-items: center; text-align: center;
+    padding: 60px 28px 32px;
+  }
+  .welcome-mark {
+    width: 92px; height: 92px;
+    background: var(--surface); border-radius: 28px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px; box-shadow: var(--shadow-md);
+  }
+  .welcome-brand { font-family: 'Fraunces', serif;
+    font-size: 13px; letter-spacing: 0.3em;
+    text-transform: uppercase; color: var(--sage-deep);
+    font-weight: 600; margin-bottom: 10px; }
+  .welcome-title { font-family: 'Fraunces', serif;
+    font-size: 38px; font-weight: 500; color: var(--ink);
+    line-height: 1.1; letter-spacing: -0.02em;
+    margin-bottom: 16px; max-width: 320px; }
+  .welcome-title em { font-style: italic; color: var(--sage-deep); }
+  .welcome-sub { font-size: 15px; color: var(--ink-soft); line-height: 1.5;
+    max-width: 300px; margin: 0 auto 24px; }
+  .welcome-veg { display: flex; justify-content: center;
+    gap: 20px; margin: 16px 0 32px; }
+  .welcome-cta { width: 100%; margin-top: auto; }
+  .welcome-trust { font-size: 11px; color: var(--ink-mute);
+    margin-top: 14px; line-height: 1.5; }
+
+  /* Friends */
+  .friends-grid { padding: 16px 20px 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .friend-card {
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 18px 14px 16px;
+    text-align: center; cursor: pointer; transition: transform 0.18s;
+  }
+  .friend-card:hover { transform: translateY(-2px); }
+  .friend-art {
+    width: 84px; height: 84px; margin: 0 auto 8px;
+    background: var(--sage-pale); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .friend-art.warm { background: #F5E5D5; }
+  .friend-art.tomato { background: #F0DEE3; }
+  .friend-art.gold { background: #F4E5C7; }
+  .friend-name { font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600; color: var(--ink); }
+  .friend-tag { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .friend-progress { margin-top: 10px; height: 4px;
+    background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+  .friend-progress-fill { height: 100%; background: var(--sage); }
+
+  .pagefoot {
+    text-align: center; color: var(--ink-soft);
+    font-size: 12px; max-width: 420px; line-height: 1.6;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 16px 0 60px; }
+    .app { border-radius: 0; min-height: 100vh; }
+    .banner { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="banner-eyebrow">Healthy Plate · Prototype</div>
+  <div class="banner-title">An AI nutrition companion for families</div>
+  <div class="banner-sub">Onboarding → diet/allergies → 300-food taste test → magic camera with before/after analysis → balanced weekly plan.</div>
+</div>
+
+<div class="app">
+
+  <div class="topbar">
+    <span>9:41</span>
+    <div class="right">
+      <svg width="16" height="10" viewBox="0 0 16 10" fill="currentColor"><path d="M14 0a2 2 0 012 2v6a2 2 0 01-2 2H2a2 2 0 01-2-2V2a2 2 0 012-2h12zm-1 2H3a1 1 0 00-1 1v4a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1z"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 9.5a1 1 0 100 2 1 1 0 000-2zm0-3a3 3 0 012.83 2A4 4 0 008 7.5a4 4 0 00-2.83.99A3 3 0 018 6.5zm0-3a6 6 0 015.66 4 7 7 0 00-11.32 0A6 6 0 018 3.5zm0-3a9 9 0 018.49 6 10 10 0 00-16.98 0A9 9 0 018 .5z"/></svg>
+    </div>
+  </div>
+
+  <!-- ========= WELCOME ========= -->
+  <div id="screen-welcome" class="screen active welcome-screen">
+    <div class="welcome-mark">
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+        <path d="M22 4 C30 8, 36 14, 38 22 C36 32, 28 38, 22 40 C16 38, 8 32, 6 22 C8 14, 14 8, 22 4 Z" fill="#5A8073"/>
+        <path d="M22 12 C26 16, 28 20, 22 32 C16 20, 18 16, 22 12 Z" fill="#A8BFA8"/>
+      </svg>
+    </div>
+    <div class="welcome-brand">Healthy Plate</div>
+    <h1 class="welcome-title">Raise a generation that <em>loves</em> vegetables.</h1>
+    <p class="welcome-sub">A pocket nutritionist that learns your child — one meal at a time.</p>
+    <div class="welcome-veg">
+      <svg width="44" height="44" viewBox="0 0 44 44" class="v-char">
+        <path d="M22 8 C19 16, 18 24, 20 36 C22 38, 22 38, 24 36 C26 24, 25 16, 22 8 Z" fill="#D88463"/>
+        <path d="M22 8 C20 4, 17 4, 18 8 M22 8 C24 3, 27 4, 26 8 M22 8 C22 3, 22 3, 22 8" stroke="#5A8073" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+      <svg width="44" height="44" viewBox="0 0 44 44" class="v-char">
+        <circle cx="14" cy="14" r="6" fill="#5A8073"/>
+        <circle cx="22" cy="10" r="7" fill="#5A8073"/>
+        <circle cx="30" cy="14" r="6" fill="#5A8073"/>
+        <circle cx="20" cy="18" r="5" fill="#4A6B5F"/>
+        <path d="M18 22 L18 34 Q18 36 20 36 L24 36 Q26 36 26 34 L26 22 Z" fill="#E8DCB8"/>
+      </svg>
+      <svg width="44" height="44" viewBox="0 0 44 44" class="v-char">
+        <circle cx="22" cy="26" r="14" fill="#C95C4D"/>
+        <path d="M22 12 L18 8 L22 10 L26 8 L24 12" fill="#5A8073"/>
+      </svg>
+      <svg width="44" height="44" viewBox="0 0 44 44" class="v-char">
+        <path d="M22 12 C16 14, 14 22, 16 30 C18 36, 26 36, 28 30 C30 22, 28 14, 22 12 Z" fill="#E5B96A"/>
+        <path d="M22 12 L20 6 L24 6 L22 12 Z" fill="#5A8073"/>
+      </svg>
+    </div>
+    <div class="welcome-cta">
+      <button class="btn-primary" onclick="goTo('onb1')">Get started — it's free</button>
+      <p class="welcome-trust">Trusted by 2,400+ families on the waitlist · Designed with pediatric dietitians</p>
+    </div>
+  </div>
+
+  <!-- ========= ONBOARDING 1 ========= -->
+  <div id="screen-onb1" class="screen onboarding">
+    <div class="ob-progress">
+      <div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div>
+    </div>
+    <div class="ob-hero">
+      <div class="ob-mark">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4A6B5F" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <div class="ob-eyebrow">Step 1 of 4</div>
+      <h2 class="ob-title">Tell us about <em>your little one</em></h2>
+      <p class="ob-sub">We'll personalize everything to fit their age and palate.</p>
+    </div>
+    <div class="field">
+      <label>Child's first name</label>
+      <input type="text" placeholder="e.g. Maya" value="Maya">
+    </div>
+    <div class="field">
+      <label>Age</label>
+      <div class="age-grid" id="ageGrid">
+        <button class="age-pill">2</button><button class="age-pill">3</button>
+        <button class="age-pill selected">4</button><button class="age-pill">5</button>
+        <button class="age-pill">6</button><button class="age-pill">7</button>
+        <button class="age-pill">8</button><button class="age-pill">9</button>
+        <button class="age-pill">10</button><button class="age-pill">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Gender <small style="color:var(--ink-mute); font-weight:500;">(used for growth comparison curves)</small></label>
+      <div class="chip-row" style="margin-bottom: 0;">
+        <button class="chip selected" data-single="gender">👧 Girl</button>
+        <button class="chip" data-single="gender">👦 Boy</button>
+        <button class="chip" data-single="gender">Prefer not to say</button>
+      </div>
+    </div>
+
+    <div class="field-row" id="hwFields">
+      <div class="field">
+        <label>Height <small>(cm)</small></label>
+        <input type="text" placeholder="e.g. 102" value="102" id="heightInput">
+      </div>
+      <div class="field">
+        <label>Weight <small>(kg)</small></label>
+        <input type="text" placeholder="e.g. 16.4" value="16.4" id="weightInput">
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin: -6px 0 16px; flex-wrap: wrap;">
+      <p style="font-size:11px; color:var(--ink-mute); line-height:1.5; flex:1; min-width:200px; margin:0;">
+        Optional — we plot growth on WHO percentile curves. You can add these now or anytime from Maya's profile.
+      </p>
+      <button type="button" id="skipHwBtn" onclick="toggleSkipHW()"
+        style="background:var(--cream); border:1px solid var(--border); color:var(--ink-soft); font-family:inherit; font-size:11px; font-weight:600; padding:7px 12px; border-radius:100px; cursor:pointer; white-space:nowrap;">
+        Skip — add later
+      </button>
+    </div>
+
+    <!-- "Will add later" confirmation pill — shown when skipped -->
+    <div id="hwSkippedPill" style="display:none; margin: -6px 0 16px; padding: 10px 12px; background: var(--sage-pale); border-radius: var(--radius-sm); display:none; align-items:center; gap:8px; font-size:12px; color:var(--sage-deep);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <strong style="font-family:'Fraunces',serif; font-weight:600;">No problem.</strong>
+      <span>We'll remind you next month — or add anytime in Insights.</span>
+      <button type="button" onclick="toggleSkipHW()" style="background:none; border:none; color:var(--sage-deep); font-family:inherit; font-size:11px; font-weight:700; cursor:pointer; margin-left:auto;">Undo</button>
+    </div>
+
+    <div class="btn-stack">
+      <button class="btn-primary" onclick="goTo('diet')">Continue</button>
+      <button class="btn-secondary" onclick="goTo('welcome')">Back</button>
+    </div>
+  </div>
+
+  <!-- ========= DIET / ALLERGIES ========= -->
+  <div id="screen-diet" class="screen onboarding">
+    <div class="ob-progress">
+      <div class="ob-dot active"></div><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div>
+    </div>
+    <div class="ob-hero">
+      <div class="ob-mark" style="background:#F4E5C7;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8B5A2B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="18" r="0.6" fill="#8B5A2B"/></svg>
+      </div>
+      <div class="ob-eyebrow">Step 2 of 4</div>
+      <h2 class="ob-title">Any <em>dietary needs</em> we should know about?</h2>
+      <p class="ob-sub">Anything you mark here, we'll never recommend.</p>
+    </div>
+    <div>
+      <div class="field-section-label">Allergies <small>tap any that apply</small></div>
+      <div class="chip-row">
+        <button class="chip warn">Peanuts</button>
+        <button class="chip warn selected">Tree nuts</button>
+        <button class="chip warn">Dairy</button>
+        <button class="chip warn">Eggs</button>
+        <button class="chip warn">Soy</button>
+        <button class="chip warn">Wheat / Gluten</button>
+        <button class="chip warn">Shellfish</button>
+        <button class="chip warn">Fish</button>
+        <button class="chip warn">Sesame</button>
+      </div>
+    </div>
+    <div>
+      <div class="field-section-label">Intolerances</div>
+      <div class="chip-row">
+        <button class="chip warn">Lactose</button>
+        <button class="chip warn">Gluten (non-celiac)</button>
+        <button class="chip warn">FODMAP</button>
+        <button class="chip warn">Histamine</button>
+      </div>
+    </div>
+    <div>
+      <div class="field-section-label">Diet style</div>
+      <div class="chip-row">
+        <button class="chip selected" data-single="diet">No restrictions</button>
+        <button class="chip" data-single="diet">Vegetarian</button>
+        <button class="chip" data-single="diet">Vegan</button>
+        <button class="chip" data-single="diet">Pescatarian</button>
+        <button class="chip" data-single="diet">Halal</button>
+        <button class="chip" data-single="diet">Kosher</button>
+      </div>
+    </div>
+    <div>
+      <div class="field">
+        <label>Anything else we should know?</label>
+        <textarea placeholder="e.g. dislikes anything spicy, sensitive to mushrooms, only drinks oat milk…"></textarea>
+      </div>
+    </div>
+    <div class="btn-stack">
+      <button class="btn-primary" onclick="goTo('onb2')">Continue</button>
+      <button class="btn-secondary" onclick="goTo('onb1')">Back</button>
+    </div>
+  </div>
+
+  <!-- ========= HABITS ========= -->
+  <div id="screen-onb2" class="screen onboarding">
+    <div class="ob-progress">
+      <div class="ob-dot active"></div><div class="ob-dot active"></div><div class="ob-dot active"></div><div class="ob-dot"></div>
+    </div>
+    <div class="ob-hero">
+      <div class="ob-eyebrow">Step 3 of 4</div>
+      <h2 class="ob-title">What sounds like <em>mealtime today</em>?</h2>
+      <p class="ob-sub">Pick anything that fits. There are no wrong answers — and no judgement.</p>
+    </div>
+    <div class="habits-list" id="habitsList">
+      <button class="habit-row selected">
+        <span class="habit-emoji">🥦</span>
+        <span class="habit-text">Refuses most vegetables<small>The classic standoff at every dinner</small></span>
+      </button>
+      <button class="habit-row selected">
+        <span class="habit-emoji">🍝</span>
+        <span class="habit-text">Eats the same 5 things on rotation<small>Plain pasta? Plain pasta.</small></span>
+      </button>
+      <button class="habit-row">
+        <span class="habit-emoji">🍪</span>
+        <span class="habit-text">Snacks more than meals<small>Crackers, pouches, repeat</small></span>
+      </button>
+      <button class="habit-row">
+        <span class="habit-emoji">🧴</span>
+        <span class="habit-text">Curious about supplements<small>But unsure what they actually need</small></span>
+      </button>
+    </div>
+    <div class="btn-stack">
+      <button class="btn-primary" onclick="goTo('onb3')">Continue</button>
+      <button class="btn-secondary" onclick="goTo('diet')">Back</button>
+    </div>
+  </div>
+
+  <!-- ========= CONFIRM ========= -->
+  <div id="screen-onb3" class="screen onboarding">
+    <div class="ob-progress">
+      <div class="ob-dot active"></div><div class="ob-dot active"></div><div class="ob-dot active"></div><div class="ob-dot active"></div>
+    </div>
+    <div class="ob-hero">
+      <div class="ob-mark" style="background:#F4E5C7;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 0l3-3m-3 3L9 5"/><path d="M5 12c0-3 3-4 7-4s7 1 7 4v5c0 2-2 3-7 3s-7-1-7-3v-5z"/></svg>
+      </div>
+      <div class="ob-eyebrow">Step 4 of 4</div>
+      <h2 class="ob-title">Maya's profile is <em>ready</em></h2>
+      <p class="ob-sub">Next up: the taste test. Even 30 ratings produce a usable plan.</p>
+    </div>
+
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <strong style="font-size:13px; font-family:'Fraunces',serif; font-weight:600;">Your starting profile</strong>
+        <span style="font-size:11px; color:var(--ink-mute);">Editable anytime</span>
+      </div>
+      <div style="font-size:13px; color:var(--ink-soft); line-height:1.6;">
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border-soft);"><span>Child</span><span style="color:var(--ink); font-weight:600;">👧 Maya, age 4</span></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border-soft);"><span>Growth</span><span style="color:var(--ink); font-weight:600;">102 cm · 16.4 kg · 60th %ile</span></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border-soft);"><span>Allergies</span><span style="color:var(--carrot); font-weight:600;">Tree nuts</span></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border-soft);"><span>Diet style</span><span style="color:var(--ink); font-weight:600;">No restrictions</span></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border-soft);"><span>Eating pattern</span><span style="color:var(--ink); font-weight:600;">Selective</span></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0;"><span>Watch list</span><span style="color:var(--ink); font-weight:600;">Iron, Vit. D, Fiber</span></div>
+      </div>
+    </div>
+
+    <div style="background:var(--sage-pale); border-radius:var(--radius); padding:16px; margin-bottom:14px; display:flex; gap:12px; align-items:flex-start;">
+      <div style="width:32px; height:32px; background:var(--sage-deep); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FAF7F0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </div>
+      <div style="font-size:12px; color:var(--ink); line-height:1.5;">
+        <strong style="font-family:'Fraunces',serif; font-size:13px; display:block; margin-bottom:2px;">The taste test</strong>
+        Rate ~300 popular foods — Love, OK, Doesn't like, Hard no, Maybe, or Not sure. The more you do, the sharper Maya's plan gets.
+      </div>
+    </div>
+
+    <div class="btn-stack">
+      <button class="btn-primary" onclick="goTo('tasteTest')">Start the taste test →</button>
+      <button class="btn-secondary" onclick="goToApp('home')">Skip for now — open app</button>
+    </div>
+  </div>
+
+  <!-- ========= TASTE TEST ========= -->
+  <div id="screen-tasteTest" class="screen tt-screen">
+    <div class="tt-topbar">
+      <div class="tt-topbar-row">
+        <button class="tt-back" onclick="goToApp('home')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="tt-title">Maya's taste profile</div>
+        <button class="tt-save" onclick="goToApp('home')">Save</button>
+      </div>
+      <div class="tt-progress-wrap">
+        <div class="tt-progress-bar"><div class="tt-progress-fill" id="ttProgressBar" style="width:18%;"></div></div>
+        <div class="tt-progress-num"><span id="ttProgressNum">55</span><span> / 300</span></div>
+      </div>
+      <div class="tt-hint">Tap how Maya feels about each food. <strong>+30 unlocks her starter plan ✓</strong></div>
+    </div>
+    <div class="tt-categories">
+      <div class="tt-cat-row">
+        <button class="tt-cat active">All <span class="tt-cat-count">300</span></button>
+        <button class="tt-cat">Vegetables <span class="tt-cat-count">68</span></button>
+        <button class="tt-cat">Fruits <span class="tt-cat-count">42</span></button>
+        <button class="tt-cat">Proteins <span class="tt-cat-count">38</span></button>
+        <button class="tt-cat">Grains <span class="tt-cat-count">26</span></button>
+        <button class="tt-cat">Dairy <span class="tt-cat-count">22</span></button>
+        <button class="tt-cat">Snacks <span class="tt-cat-count">34</span></button>
+        <button class="tt-cat">Spices <span class="tt-cat-count">28</span></button>
+        <button class="tt-cat">Drinks <span class="tt-cat-count">18</span></button>
+      </div>
+    </div>
+    <div class="tt-milestone">
+      <span class="icon">🎉</span>
+      <div><strong>You've unlocked Maya's starter plan.</strong> Keep going — every 50 ratings makes meal suggestions even better.</div>
+    </div>
+    <div class="tt-list">
+      <div class="food-card rated">
+        <div class="food-head">
+          <div class="food-emoji">🍓</div>
+          <div class="food-name">Strawberry</div>
+          <span class="food-rated-badge love">❤️ Loves</span>
+        </div>
+        <div class="rating-grid">
+          <button class="rating-btn love selected"><span class="ric">❤️</span><span class="rlbl">Love</span></button>
+          <button class="rating-btn ok"><span class="ric">👍</span><span class="rlbl">OK</span></button>
+          <button class="rating-btn meh"><span class="ric">🤷</span><span class="rlbl">Maybe</span></button>
+          <button class="rating-btn no"><span class="ric">👎</span><span class="rlbl">Not really</span></button>
+          <button class="rating-btn hardno"><span class="ric">🚫</span><span class="rlbl">Hard no</span></button>
+          <button class="rating-btn unsure"><span class="ric">❓</span><span class="rlbl">Not sure</span></button>
+        </div>
+      </div>
+      <div class="food-card rated">
+        <div class="food-head">
+          <div class="food-emoji">🥦</div>
+          <div class="food-name">Broccoli</div>
+          <span class="food-rated-badge hardno">🚫 Hard no</span>
+        </div>
+        <div class="rating-grid">
+          <button class="rating-btn love"><span class="ric">❤️</span><span class="rlbl">Love</span></button>
+          <button class="rating-btn ok"><span class="ric">👍</span><span class="rlbl">OK</span></button>
+          <button class="rating-btn meh"><span class="ric">🤷</span><span class="rlbl">Maybe</span></button>
+          <button class="rating-btn no"><span class="ric">👎</span><span class="rlbl">Not really</span></button>
+          <button class="rating-btn hardno selected"><span class="ric">🚫</span><span class="rlbl">Hard no</span></button>
+          <button class="rating-btn unsure"><span class="ric">❓</span><span class="rlbl">Not sure</span></button>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-head"><div class="food-emoji">🥒</div><div class="food-name">Cucumber</div></div>
+        <div class="rating-grid">
+          <button class="rating-btn love"><span class="ric">❤️</span><span class="rlbl">Love</span></button>
+          <button class="rating-btn ok"><span class="ric">👍</span><span class="rlbl">OK</span></button>
+          <button class="rating-btn meh"><span class="ric">🤷</span><span class="rlbl">Maybe</span></button>
+          <button class="rating-btn no"><span class="ric">👎</span><span class="rlbl">Not really</span></button>
+          <button class="rating-btn hardno"><span class="ric">🚫</span><span class="rlbl">Hard no</span></button>
+          <button class="rating-btn unsure"><span class="ric">❓</span><span class="rlbl">Not sure</span></button>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-head"><div class="food-emoji">🍅</div><div class="food-name">Tomato (raw)</div></div>
+        <div class="rating-grid">
+          <button class="rating-btn love"><span class="ric">❤️</span><span class="rlbl">Love</span></button>
+          <button class="rating-btn ok"><span class="ric">👍</span><span class="rlbl">OK</span></button>
+          <button class="rating-btn meh"><span class="ric">🤷</span><span class="rlbl">Maybe</span></button>
+          <button class="rating-btn no"><span class="ric">👎</span><span class="rlbl">Not really</span></button>
+          <button class="rating-btn hardno"><span class="ric">🚫</span><span class="rlbl">Hard no</span></button>
+          <button class="rating-btn unsure"><span class="ric">❓</span><span class="rlbl">Not sure</span></button>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-head"><div class="food-emoji">🍠</div><div class="food-name">Sweet potato</div></div>
+        <div class="rating-grid">
+          <button class="rating-btn love"><span class="ric">❤️</span><span class="rlbl">Love</span></button>
+          <button class="rating-btn ok"><span class="ric">👍</span><span class="rlbl">OK</span></button>
+          <button class="rating-btn meh"><span class="ric">🤷</span><span class="rlbl">Maybe</span></button>
+          <button class="rating-btn no"><span class="ric">👎</span><span class="rlbl">Not really</span></button>
+          <button class="rating-btn hardno"><span class="ric">🚫</span><span class="rlbl">Hard no</span></button>
+          <button class="rating-btn unsure"><span class="ric">❓</span><span class="rlbl">Not sure</span></button>
+        </div>
+      </div>
+      <div class="food-card">
+        <div class="food-head"><div class="food-emoji">🥚</div><div class="food-name">Scrambled eggs</div></div>
+        <div class="rating-grid">
+          <button class="rating-btn love"><span class="ric">❤️</span><span class="rlbl">Love</span></button>
+          <button class="rating-btn ok"><span class="ric">👍</span><span class="rlbl">OK</span></button>
+          <button class="rating-btn meh"><span class="ric">🤷</span><span class="rlbl">Maybe</span></button>
+          <button class="rating-btn no"><span class="ric">👎</span><span class="rlbl">Not really</span></button>
+          <button class="rating-btn hardno"><span class="ric">🚫</span><span class="rlbl">Hard no</span></button>
+          <button class="rating-btn unsure"><span class="ric">❓</span><span class="rlbl">Not sure</span></button>
+        </div>
+      </div>
+      <div style="text-align:center; padding: 18px 0 4px; font-size:12px; color:var(--ink-mute);">
+        — 245 more foods —
+      </div>
+    </div>
+    <div class="tt-footer">
+      <button class="btn-primary" onclick="goToApp('home')">Save & continue building plan</button>
+    </div>
+  </div>
+
+  <!-- ========= HOME ========= -->
+  <div id="screen-home" class="screen">
+    <div class="home-header">
+      <div>
+        <div class="greeting">Friday, April 24</div>
+        <div style="font-family:'Fraunces',serif; font-size:22px; font-weight:500; margin-top:2px;">Good morning</div>
+      </div>
+      <div class="child-pill">Maya · 4<div class="child-avatar">M</div></div>
+    </div>
+
+    <!-- Monthly measurement reminder -->
+    <div class="measure-cta" onclick="goToApp('insights')">
+      <div class="measure-cta-pulse"></div>
+      <div class="measure-cta-icon">📏</div>
+      <div class="measure-cta-text">
+        <div class="measure-cta-title">Time to measure Maya</div>
+        <div class="measure-cta-desc">Last update was 32 days ago — 1 minute, big difference for her plan</div>
+      </div>
+      <div class="measure-cta-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <!-- Pending after-shot -->
+    <div class="pending-meal" onclick="openSnap('after')">
+      <div class="pending-meal-icon">📸</div>
+      <div class="pending-meal-text">
+        <div class="pending-meal-title">Lunch is in progress</div>
+        <div class="pending-meal-desc">Snap how much Maya ate when she's done</div>
+      </div>
+      <div class="pending-meal-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="hero-eyebrow">Today's nudge</div>
+      <div class="hero-title">Maya's ready to try roasted carrot — acceptance is up to 78%.</div>
+      <div class="hero-stats">
+        <div><div class="hero-stat-num">78<span style="font-size:16px;">%</span></div><div class="hero-stat-label">Acceptance prob.</div></div>
+        <div><div class="hero-stat-num">12</div><div class="hero-stat-label">Meals logged</div></div>
+        <div><div class="hero-stat-num">147</div><div class="hero-stat-label">All-time</div></div>
+      </div>
+    </div>
+
+    <div class="profile-card" onclick="goToApp('tasteTest')">
+      <div class="profile-ring">
+        <svg width="60" height="60" viewBox="0 0 60 60">
+          <circle cx="30" cy="30" r="25" fill="none" stroke="#E8E5DD" stroke-width="5"/>
+          <circle cx="30" cy="30" r="25" fill="none" stroke="#5A8073" stroke-width="5" stroke-dasharray="157" stroke-dashoffset="128.7" stroke-linecap="round"/>
+        </svg>
+        <div class="profile-ring-num">18%</div>
+      </div>
+      <div class="profile-card-text">
+        <div class="profile-card-title">Keep building Maya's taste profile</div>
+        <div class="profile-card-desc"><strong style="color:var(--sage-deep);">55 / 300</strong> rated · the more you do, the better her plan</div>
+      </div>
+      <div class="profile-card-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quick-actions">
+      <button class="quick-action" onclick="openSnap('before')">
+        <div class="qa-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <div class="qa-title">Snap a meal</div>
+        <div class="qa-desc">Before & after — we analyze what was eaten</div>
+      </button>
+      <button class="quick-action warm" onclick="goToApp('describeMeal')">
+        <div class="qa-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div class="qa-title">Describe a meal</div>
+        <div class="qa-desc">For meals you couldn't snap (school, grandma)</div>
+      </button>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">Today's plan</div>
+      <button class="section-link" onclick="goToApp('plan')">See week →</button>
+    </div>
+    <div class="plan-list">
+      <div class="plan-item">
+        <div class="plan-meal-icon" style="background:#F4E5C7;">🥣</div>
+        <div class="plan-meal-info">
+          <div class="plan-meal-time">Breakfast · 8:00</div>
+          <div class="plan-meal-name">Banana oats with hidden spinach</div>
+          <div class="plan-meal-tags"><span class="meal-tag">Iron+</span><span class="meal-tag warm">Familiar</span></div>
+        </div>
+        <div class="plan-meal-status done">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+      <div class="plan-item">
+        <div class="plan-meal-icon" style="background:#DCE8DD;">🥗</div>
+        <div class="plan-meal-info">
+          <div class="plan-meal-time">Lunch · 12:30</div>
+          <div class="plan-meal-name">Roasted carrot ribbons + couscous</div>
+          <div class="plan-meal-tags"><span class="meal-tag">Try new</span><span class="meal-tag berry">Vit. A</span></div>
+        </div>
+        <div class="plan-meal-status partial">½</div>
+      </div>
+      <div class="plan-item">
+        <div class="plan-meal-icon" style="background:#F0DEE3;">🍝</div>
+        <div class="plan-meal-info">
+          <div class="plan-meal-time">Dinner · 18:00</div>
+          <div class="plan-meal-name">Tomato pasta with lentil sauce</div>
+          <div class="plan-meal-tags"><span class="meal-tag">Iron+</span><span class="meal-tag warm">Loved</span></div>
+        </div>
+        <div class="plan-meal-status"></div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">Veggie of the day</div>
+      <button class="section-link" onclick="goToApp('friends')">All friends →</button>
+    </div>
+    <div class="insight-card">
+      <svg class="insight-veggie" viewBox="0 0 56 56">
+        <path d="M28 8 C24 18, 22 30, 26 46 C28 48, 28 48, 30 46 C34 30, 32 18, 28 8 Z" fill="#D88463"/>
+        <path d="M28 8 C24 2, 20 2, 22 8 M28 8 C32 2, 36 2, 34 8 M28 8 C28 2, 28 2, 28 8" stroke="#5A8073" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="24" cy="22" r="1.6" fill="#1A201E"/><circle cx="30" cy="22" r="1.6" fill="#1A201E"/>
+        <path d="M24 28 Q27 30 30 28" stroke="#1A201E" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="insight-text">
+        <div class="insight-name">Curio the Carrot</div>
+        <div class="insight-desc">"I helped Maya see in the dark on a pirate hunt!" Unlock a new story when Maya tries one bite.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= SNAP ========= -->
+  <div id="screen-snap" class="screen snap-screen">
+    <div class="snap-header">
+      <button class="snap-close" onclick="goToApp('home')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div style="font-size:13px; font-weight:600;" id="snapTitle">Snap a meal</div>
+      <button class="snap-flash">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </button>
+    </div>
+
+    <!-- Mode toggle -->
+    <div class="snap-mode" id="snapMode">
+      <button class="snap-mode-btn active" data-mode="before" onclick="setSnapMode('before')">
+        <span class="dot"></span>Before
+      </button>
+      <button class="snap-mode-btn" data-mode="after" onclick="setSnapMode('after')">
+        <span class="dot"></span>After eating
+      </button>
+    </div>
+
+    <div class="viewfinder" id="viewfinder">
+      <svg viewBox="0 0 320 360" class="plate-svg" id="snapPlate">
+        <ellipse cx="160" cy="200" rx="140" ry="120" fill="#F5F1E8"/>
+        <ellipse cx="160" cy="200" rx="120" ry="100" fill="#FAF7F0" stroke="#E8E5DD" stroke-width="2"/>
+        <g id="plate-foods">
+          <ellipse cx="100" cy="170" rx="22" ry="14" fill="#D88463"/>
+          <ellipse cx="100" cy="168" rx="14" ry="6" fill="#E8946A"/>
+          <ellipse cx="130" cy="155" rx="18" ry="11" fill="#D88463"/>
+          <circle cx="200" cy="160" r="14" fill="#5A8073"/>
+          <circle cx="215" cy="170" r="11" fill="#5A8073"/>
+          <circle cx="195" cy="175" r="9" fill="#4A6B5F"/>
+          <circle cx="220" cy="158" r="9" fill="#4A6B5F"/>
+          <g id="couscous-grains">
+            <circle cx="160" cy="240" r="3" fill="#E5B96A"/><circle cx="170" cy="245" r="3" fill="#E5B96A"/><circle cx="180" cy="240" r="3" fill="#E5B96A"/><circle cx="155" cy="250" r="3" fill="#E5B96A"/><circle cx="175" cy="255" r="3" fill="#E5B96A"/><circle cx="165" cy="255" r="3" fill="#E5B96A"/><circle cx="190" cy="248" r="3" fill="#E5B96A"/><circle cx="150" cy="245" r="3" fill="#E5B96A"/><circle cx="185" cy="258" r="3" fill="#E5B96A"/><circle cx="145" cy="258" r="3" fill="#E5B96A"/><circle cx="160" cy="262" r="3" fill="#E5B96A"/><circle cx="172" cy="265" r="3" fill="#E5B96A"/>
+          </g>
+        </g>
+      </svg>
+
+      <div class="detect-box" id="box1" style="top:38%; left:22%; width:30%; height:14%;">
+        <span class="detect-label">Carrots · 92%</span>
+      </div>
+      <div class="detect-box" id="box2" style="top:36%; left:55%; width:22%; height:14%;">
+        <span class="detect-label">Broccoli · 96%</span>
+      </div>
+      <div class="detect-box" id="box3" style="top:58%; left:38%; width:32%; height:18%;">
+        <span class="detect-label">Couscous · 88%</span>
+      </div>
+
+      <!-- Dancing veggies AR overlay -->
+      <div class="dancing-veggies" id="dancingVeggies">
+        <svg class="dv-char" style="top:14%; left:18%;" width="38" height="38" viewBox="0 0 44 44">
+          <path d="M22 8 C19 16, 18 24, 20 36 C22 38, 22 38, 24 36 C26 24, 25 16, 22 8 Z" fill="#D88463"/>
+          <path d="M22 8 C20 4, 17 4, 18 8 M22 8 C24 3, 27 4, 26 8" stroke="#5A8073" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <circle cx="19" cy="20" r="1.4" fill="#1A201E"/><circle cx="25" cy="20" r="1.4" fill="#1A201E"/>
+          <path d="M19 25 Q22 27 25 25" stroke="#1A201E" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        </svg>
+        <svg class="dv-char" style="top:8%; right:14%;" width="38" height="38" viewBox="0 0 44 44">
+          <circle cx="14" cy="16" r="6" fill="#5A8073"/><circle cx="22" cy="12" r="7" fill="#5A8073"/><circle cx="30" cy="16" r="6" fill="#5A8073"/>
+          <path d="M18 20 L18 32 L26 32 L26 20 Z" fill="#E8DCB8"/>
+          <circle cx="20" cy="22" r="1.2" fill="#1A201E"/><circle cx="24" cy="22" r="1.2" fill="#1A201E"/>
+        </svg>
+        <svg class="dv-char" style="bottom:24%; left:10%;" width="32" height="32" viewBox="0 0 44 44">
+          <circle cx="22" cy="26" r="14" fill="#C95C4D"/>
+          <path d="M22 12 L18 8 L22 10 L26 8 L24 12" fill="#5A8073"/>
+          <circle cx="18" cy="24" r="1.2" fill="#1A201E"/><circle cx="26" cy="24" r="1.2" fill="#1A201E"/>
+          <path d="M18 30 Q22 32 26 30" stroke="#1A201E" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="dv-sparkle" style="top:30%; left:46%;"></div>
+        <div class="dv-sparkle" style="top:58%; right:22%; animation-delay:.4s;"></div>
+        <div class="dv-sparkle" style="bottom:35%; left:30%; animation-delay:.7s;"></div>
+        <div class="dv-banner">🎶 Veggies are dancing — tap to play song</div>
+      </div>
+
+      <div class="scanline" id="scanline"></div>
+    </div>
+
+    <div class="snap-status" id="snapStatus">
+      Center the plate in frame — we'll detect food and portions automatically.
+    </div>
+
+    <div class="shutter-wrap">
+      <button class="shutter-side" title="Photo library">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+      </button>
+      <button class="shutter" id="shutterBtn" onclick="runDetection()"></button>
+      <button class="shutter-side" title="Switch camera">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========= CONFIRM (after BEFORE shot) ========= -->
+  <div id="screen-confirm" class="screen confirm-screen">
+    <div class="confirm-header">
+      <button class="confirm-back" onclick="goToApp('snap')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Retake
+      </button>
+      <div style="font-size:13px; font-weight:600; color:var(--ink);">Before · confirm</div>
+      <div style="width:50px;"></div>
+    </div>
+    <div class="confirm-photo">
+      <svg viewBox="0 0 320 240" style="width:80%; height:auto;">
+        <ellipse cx="160" cy="120" rx="140" ry="100" fill="#F5F1E8"/>
+        <ellipse cx="160" cy="120" rx="120" ry="84" fill="#FAF7F0" stroke="#E8E5DD" stroke-width="2"/>
+        <ellipse cx="100" cy="100" rx="22" ry="14" fill="#D88463"/>
+        <ellipse cx="130" cy="90" rx="18" ry="11" fill="#D88463"/>
+        <circle cx="200" cy="95" r="14" fill="#5A8073"/>
+        <circle cx="215" cy="105" r="11" fill="#5A8073"/>
+        <circle cx="220" cy="92" r="9" fill="#4A6B5F"/>
+        <g>
+          <circle cx="160" cy="155" r="3" fill="#E5B96A"/><circle cx="170" cy="160" r="3" fill="#E5B96A"/><circle cx="180" cy="155" r="3" fill="#E5B96A"/><circle cx="155" cy="165" r="3" fill="#E5B96A"/><circle cx="175" cy="170" r="3" fill="#E5B96A"/><circle cx="165" cy="170" r="3" fill="#E5B96A"/><circle cx="190" cy="163" r="3" fill="#E5B96A"/><circle cx="150" cy="160" r="3" fill="#E5B96A"/>
+        </g>
+      </svg>
+    </div>
+    <div class="confirm-title">We found 3 foods</div>
+    <div class="confirm-sub">Tap any item to fix the name or portion. Every correction trains Maya's model.</div>
+    <div class="detected-list">
+      <div class="detected-item">
+        <div class="detected-emoji">🥕</div>
+        <div class="detected-info"><div class="detected-name">Roasted carrot</div><div class="detected-portion">≈ ⅓ cup · ~45 g</div></div>
+        <span class="confidence">92%</span>
+      </div>
+      <div class="detected-item">
+        <div class="detected-emoji">🥦</div>
+        <div class="detected-info"><div class="detected-name">Steamed broccoli</div><div class="detected-portion">≈ ¼ cup · ~30 g</div></div>
+        <span class="confidence">96%</span>
+      </div>
+      <div class="detected-item">
+        <div class="detected-emoji">🌾</div>
+        <div class="detected-info"><div class="detected-name">Couscous</div><div class="detected-portion">≈ ½ cup · ~80 g</div></div>
+        <span class="confidence">88%</span>
+      </div>
+    </div>
+    <div style="margin: 16px 20px 0; padding: 14px 16px; background: var(--sage-pale); border-radius: var(--radius); display:flex; gap:12px; align-items:flex-start;">
+      <div style="flex-shrink:0; width:32px; height:32px; background:var(--sage-deep); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FAF7F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-size:12px; color:var(--ink); line-height:1.5;">
+        <strong style="font-family:'Fraunces',serif; font-size:13px;">Saved as Maya's lunch.</strong><br>
+        Snap again when she's done — we'll calculate what she actually ate.
+      </div>
+    </div>
+    <div class="confirm-cta">
+      <button class="btn-primary" onclick="goToApp('home')">Save before-photo · I'll snap after</button>
+    </div>
+  </div>
+
+  <!-- ========= MEAL ANALYSIS (after AFTER shot) ========= -->
+  <div id="screen-mealAnalysis" class="screen confirm-screen">
+    <div class="confirm-header">
+      <button class="confirm-back" onclick="goToApp('home')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Home
+      </button>
+      <div style="font-size:13px; font-weight:600; color:var(--ink);">Meal analyzed</div>
+      <div style="width:50px;"></div>
+    </div>
+
+    <div class="ma-header">
+      <div class="ma-title">Maya's lunch</div>
+      <div class="ma-sub">Friday · 12:30 PM · Logged forever to her food history</div>
+    </div>
+
+    <!-- Before/After comparison -->
+    <div class="ma-comparison">
+      <div class="ma-photo">
+        <span class="ma-photo-label">Before</span>
+        <svg viewBox="0 0 200 200" style="width:80%;">
+          <ellipse cx="100" cy="105" rx="85" ry="70" fill="#F5F1E8"/>
+          <ellipse cx="100" cy="105" rx="72" ry="58" fill="#FAF7F0" stroke="#E8E5DD" stroke-width="1.5"/>
+          <ellipse cx="65" cy="85" rx="14" ry="9" fill="#D88463"/>
+          <ellipse cx="80" cy="78" rx="11" ry="7" fill="#D88463"/>
+          <circle cx="125" cy="80" r="9" fill="#5A8073"/>
+          <circle cx="135" cy="88" r="7" fill="#5A8073"/>
+          <circle cx="138" cy="78" r="6" fill="#4A6B5F"/>
+          <g>
+            <circle cx="100" cy="125" r="2" fill="#E5B96A"/><circle cx="108" cy="128" r="2" fill="#E5B96A"/><circle cx="115" cy="125" r="2" fill="#E5B96A"/><circle cx="95" cy="132" r="2" fill="#E5B96A"/><circle cx="110" cy="135" r="2" fill="#E5B96A"/><circle cx="103" cy="135" r="2" fill="#E5B96A"/><circle cx="120" cy="130" r="2" fill="#E5B96A"/><circle cx="92" cy="128" r="2" fill="#E5B96A"/>
+          </g>
+        </svg>
+      </div>
+      <div class="ma-photo">
+        <span class="ma-photo-label">After</span>
+        <svg viewBox="0 0 200 200" style="width:80%;">
+          <ellipse cx="100" cy="105" rx="85" ry="70" fill="#F5F1E8"/>
+          <ellipse cx="100" cy="105" rx="72" ry="58" fill="#FAF7F0" stroke="#E8E5DD" stroke-width="1.5"/>
+          <ellipse cx="65" cy="85" rx="6" ry="4" fill="#D88463"/>
+          <circle cx="125" cy="80" r="9" fill="#5A8073"/>
+          <circle cx="138" cy="78" r="6" fill="#4A6B5F"/>
+          <g>
+            <circle cx="100" cy="125" r="2" fill="#E5B96A"/><circle cx="108" cy="128" r="2" fill="#E5B96A"/><circle cx="92" cy="128" r="2" fill="#E5B96A"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Balance score -->
+    <div class="ma-balance-card">
+      <div class="ma-balance-row">
+        <div class="ma-score-ring">
+          <svg width="84" height="84" viewBox="0 0 84 84">
+            <circle cx="42" cy="42" r="36" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="6"/>
+            <circle cx="42" cy="42" r="36" fill="none" stroke="#A8BFA8" stroke-width="6" stroke-dasharray="226" stroke-dashoffset="68" stroke-linecap="round"/>
+          </svg>
+          <div class="ma-score-num">
+            <div class="big">7<span style="font-size:14px; opacity:0.65;">/10</span></div>
+            <div class="small">Balance</div>
+          </div>
+        </div>
+        <div class="ma-balance-text">
+          <div class="ma-balance-eyebrow">Maya ate ~70%</div>
+          <div class="ma-balance-title">Solid balance — light on greens & hydration.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ma-section">
+      <div class="ma-section-title">What Maya actually ate</div>
+      <div class="ate-grid">
+        <div class="ate-row">
+          <div class="ate-emoji">🥕</div>
+          <div class="ate-name">Roasted carrot</div>
+          <div class="ate-amount">≈ 30 g</div>
+          <div class="ate-percent">80%</div>
+        </div>
+        <div class="ate-row">
+          <div class="ate-emoji">🥦</div>
+          <div class="ate-name">Steamed broccoli</div>
+          <div class="ate-amount">≈ 8 g</div>
+          <div class="ate-percent low">25%</div>
+        </div>
+        <div class="ate-row">
+          <div class="ate-emoji">🌾</div>
+          <div class="ate-name">Couscous</div>
+          <div class="ate-amount">≈ 60 g</div>
+          <div class="ate-percent">75%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ma-section">
+      <div class="ma-section-title">Nutrient breakdown <span style="font-size:11px; color:var(--ink-mute); font-weight:500; font-family:'Inter',sans-serif;">(% of meal target)</span></div>
+      <div class="nutrient-bars">
+        <div class="nutrient-row">
+          <div class="nutrient-name">Protein</div>
+          <div class="nutrient-bar-track"><div class="nutrient-bar-fill med" style="width:55%;"></div></div>
+          <div class="nutrient-pct">55%</div>
+        </div>
+        <div class="nutrient-row">
+          <div class="nutrient-name">Veggies</div>
+          <div class="nutrient-bar-track"><div class="nutrient-bar-fill low" style="width:38%;"></div></div>
+          <div class="nutrient-pct">38%</div>
+        </div>
+        <div class="nutrient-row">
+          <div class="nutrient-name">Carbs</div>
+          <div class="nutrient-bar-track"><div class="nutrient-bar-fill good" style="width:88%;"></div></div>
+          <div class="nutrient-pct">88%</div>
+        </div>
+        <div class="nutrient-row">
+          <div class="nutrient-name">Fiber</div>
+          <div class="nutrient-bar-track"><div class="nutrient-bar-fill med" style="width:62%;"></div></div>
+          <div class="nutrient-pct">62%</div>
+        </div>
+        <div class="nutrient-row">
+          <div class="nutrient-name">Iron</div>
+          <div class="nutrient-bar-track"><div class="nutrient-bar-fill good" style="width:84%;"></div></div>
+          <div class="nutrient-pct">84%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="ma-rec-card">
+      <div class="ma-rec-icon">💡</div>
+      <div class="ma-rec-text">
+        <div class="ma-rec-eyebrow">Personalized tip</div>
+        <div class="ma-rec-body">Add a few cucumber sticks at dinner — Maya rated cucumber as "Love" and it covers her remaining greens + hydration target.</div>
+        <div class="ma-rec-actions">
+          <button class="ma-rec-pill">Add to dinner</button>
+          <button class="ma-rec-pill">Suggest later</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ma-cta">
+      <button class="btn-primary" onclick="goToApp('home')">Save to history & continue</button>
+    </div>
+  </div>
+
+  <!-- ========= DESCRIBE A MEAL ========= -->
+  <div id="screen-describeMeal" class="screen dm-screen">
+    <div class="dm-header">
+      <button class="confirm-back" onclick="goToApp('home')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Cancel
+      </button>
+      <div style="font-size:13px; font-weight:600; color:var(--ink);">Describe a meal</div>
+      <div style="width:60px;"></div>
+    </div>
+    <div class="dm-title-block">
+      <div class="dm-title">For meals you couldn't snap</div>
+      <div class="dm-sub">School lunch, grandma's house, a quick snack — just type what Maya had. We'll figure out the rest and add it to her history.</div>
+    </div>
+    <div class="dm-time-pills">
+      <button class="time-pill"><span class="ic">🥣</span>Breakfast</button>
+      <button class="time-pill active"><span class="ic">🥗</span>Lunch</button>
+      <button class="time-pill"><span class="ic">🥨</span>Snack</button>
+      <button class="time-pill"><span class="ic">🍝</span>Dinner</button>
+    </div>
+    <textarea class="dm-textarea" placeholder="e.g. She had cottage cheese with cucumber slices, half a slice of whole-wheat toast, and an apple…">She had cottage cheese with cucumber slices, half a slice of whole-wheat toast, and an apple. Drank water with it.</textarea>
+
+    <div class="dm-detected">
+      <div class="dm-detected-label">We picked up</div>
+      <div class="dm-detected-row">
+        <span class="dm-tag">🧀 Cottage cheese</span>
+        <span class="dm-tag">🥒 Cucumber</span>
+        <span class="dm-tag">🍞 Whole-wheat toast</span>
+        <span class="dm-tag">🍎 Apple</span>
+        <span class="dm-tag">💧 Water</span>
+      </div>
+    </div>
+
+    <div style="padding: 18px 20px 8px; margin-top:auto;">
+      <button class="btn-primary" onclick="goToApp('home')">Save to Maya's history</button>
+      <button class="btn-secondary" onclick="goToApp('home')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ========= PLAN ========= -->
+  <div id="screen-plan" class="screen">
+    <div class="plan-header">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-size:13px; color:var(--ink-soft);">This week's plan</div>
+          <h2 style="font-family:'Fraunces',serif; font-size:26px; font-weight:500; margin-top:2px; letter-spacing:-0.01em;">Maya's menu</h2>
+        </div>
+        <button class="section-link">Edit →</button>
+      </div>
+    </div>
+
+    <div class="week-strip">
+      <div class="day-pill"><div class="day-day">Mon</div><div class="day-num">20</div></div>
+      <div class="day-pill"><div class="day-day">Tue</div><div class="day-num">21</div></div>
+      <div class="day-pill"><div class="day-day">Wed</div><div class="day-num">22</div></div>
+      <div class="day-pill"><div class="day-day">Thu</div><div class="day-num">23</div></div>
+      <div class="day-pill active"><div class="day-day">Fri</div><div class="day-num">24</div></div>
+      <div class="day-pill"><div class="day-day">Sat</div><div class="day-num">25</div></div>
+      <div class="day-pill"><div class="day-day">Sun</div><div class="day-num">26</div></div>
+    </div>
+
+    <!-- Plan generator card -->
+    <div class="plan-gen-card">
+      <div class="plan-gen-eyebrow">Personalized · balanced</div>
+      <div class="plan-gen-title">Build next week's plan around <em style="font-style:italic;">Maya's profile</em></div>
+
+      <div class="plan-pref-row">
+        <div class="plan-pref-label">Cooking</div>
+        <div class="plan-pref-val">
+          Easy / 15 min
+          <span class="skill-dots">
+            <span class="skill-dot on"></span>
+            <span class="skill-dot on"></span>
+            <span class="skill-dot"></span>
+            <span class="skill-dot"></span>
+          </span>
+          <small>Tap to adjust how much time you have</small>
+        </div>
+      </div>
+      <div class="plan-pref-row">
+        <div class="plan-pref-label">Family</div>
+        <div class="plan-pref-val">
+          Mediterranean · pasta nights · no fish
+          <small>Drawn from your last 30 meals</small>
+        </div>
+      </div>
+      <div class="plan-pref-row">
+        <div class="plan-pref-label">Maya</div>
+        <div class="plan-pref-val">
+          55 foods rated · loves carbs, sweet potato, tomato
+          <small>Will avoid: tree nuts, broccoli (hard no)</small>
+        </div>
+      </div>
+      <div class="plan-pref-row">
+        <div class="plan-pref-label">Goals</div>
+        <div class="plan-pref-val">
+          Iron+ · Vit. D · 3 new veggies/wk
+          <small>Based on the gaps in her meal history</small>
+        </div>
+      </div>
+
+      <button class="plan-gen-cta" onclick="alert('Generating Maya\\'s balanced week...')">
+        ✨ Generate my balanced week
+      </button>
+    </div>
+
+    <div class="supp-card">
+      <div class="supp-eyebrow">Personalized for Maya</div>
+      <div class="supp-title">April supplement pack</div>
+      <div class="supp-list">
+        <span class="supp-pill">Iron +</span>
+        <span class="supp-pill">Vitamin D3</span>
+        <span class="supp-pill">Omega-3</span>
+        <span class="supp-pill">Fiber</span>
+      </div>
+      <div class="supp-meta">
+        <div>
+          <div class="supp-price">$34<span style="font-size:13px; opacity:0.85;">/mo</span></div>
+          <div class="supp-price-sub">Based on 12 meals · Cancel anytime</div>
+        </div>
+        <button class="supp-cta">Review →</button>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">Friday's recipes</div>
+      <button class="section-link">Swap any →</button>
+    </div>
+    <div class="recipe-list">
+      <div class="recipe-item">
+        <div class="recipe-thumb gold" style="background:#F4E5C7;">🥣</div>
+        <div class="recipe-meta">
+          <div class="recipe-title-text">Banana oats with hidden spinach</div>
+          <div class="recipe-stats">
+            <span>⏱ 8 min</span><span>👨‍🍳 Easy</span><span>⭐ Loved last time</span>
+          </div>
+        </div>
+      </div>
+      <div class="recipe-item">
+        <div class="recipe-thumb">🥗</div>
+        <div class="recipe-meta">
+          <div class="recipe-title-text">Roasted carrot ribbons + couscous</div>
+          <div class="recipe-stats">
+            <span>⏱ 22 min</span><span>👨‍🍳 Easy</span><span style="color:var(--carrot); font-weight:600;">🌟 Try new</span>
+          </div>
+        </div>
+      </div>
+      <div class="recipe-item">
+        <div class="recipe-thumb berry">🍝</div>
+        <div class="recipe-meta">
+          <div class="recipe-title-text">Tomato pasta with lentil sauce</div>
+          <div class="recipe-stats">
+            <span>⏱ 18 min</span><span>👨‍🍳 Easy</span><span>⭐ Loved</span>
+          </div>
+        </div>
+      </div>
+      <div class="recipe-item">
+        <div class="recipe-thumb warm">🥧</div>
+        <div class="recipe-meta">
+          <div class="recipe-title-text">Apple-pear crumble (snack)</div>
+          <div class="recipe-stats">
+            <span>⏱ 15 min</span><span>👨‍🍳 Easy</span><span>🍎 Fiber+</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= INSIGHTS ========= -->
+  <div id="screen-insights" class="screen">
+    <div class="insights-header">
+      <div style="font-size:13px; color:var(--ink-soft);">Last 30 days · all-time history available</div>
+      <h2 class="insights-title">Maya's food history</h2>
+      <p class="insights-sub">Every meal you've logged becomes part of her growing nutrition story.</p>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card dark">
+        <div class="stat-label">Meals analyzed</div>
+        <div class="stat-num">147</div>
+        <div class="stat-trend">since you started</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">New foods accepted</div>
+        <div class="stat-num">7</div>
+        <div class="stat-trend">↑ 3 vs last month</div>
+      </div>
+    </div>
+
+    <!-- Growth tracker -->
+    <div class="growth-card">
+      <div class="growth-head">
+        <div class="tg-title">Maya's growth</div>
+        <div class="growth-toggle" id="growthToggle">
+          <button class="active" data-mode="height">Height</button>
+          <button data-mode="weight">Weight</button>
+        </div>
+      </div>
+
+      <div class="growth-current">
+        <div>
+          <span class="growth-num" id="growthNum">102<span class="growth-unit">cm</span></span>
+        </div>
+        <div class="growth-percentile" id="growthPercentile">60th %ile</div>
+        <div class="growth-trend" id="growthTrend">↑ steady curve</div>
+        <div class="growth-updated">Updated 6 days ago</div>
+      </div>
+
+      <div class="growth-chart-wrap">
+        <!-- HEIGHT VIEW -->
+        <div class="growth-view active" data-view="height">
+          <svg class="growth-chart" viewBox="0 0 320 160" xmlns="http://www.w3.org/2000/svg">
+            <!-- Y-axis labels -->
+            <text x="4" y="22" font-family="Inter" font-size="9" fill="#A0A8A4">115</text>
+            <text x="4" y="58" font-family="Inter" font-size="9" fill="#A0A8A4">105</text>
+            <text x="4" y="94" font-family="Inter" font-size="9" fill="#A0A8A4">95</text>
+            <text x="4" y="130" font-family="Inter" font-size="9" fill="#A0A8A4">85</text>
+
+            <!-- Gridlines -->
+            <line x1="28" y1="20" x2="312" y2="20" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="28" y1="56" x2="312" y2="56" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="28" y1="92" x2="312" y2="92" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="28" y1="128" x2="312" y2="128" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+            <!-- Percentile band (5th-95th, light fill) -->
+            <path d="M 28 124 L 100 110 L 172 95 L 244 80 L 312 65
+                     L 312 30 L 244 42 L 172 56 L 100 72 L 28 88 Z"
+                  fill="#DCE8DD" opacity="0.5"/>
+
+            <!-- 50th percentile median line -->
+            <path d="M 28 106 L 100 91 L 172 76 L 244 61 L 312 47"
+                  fill="none" stroke="#A0A8A4" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+            <!-- Maya's actual growth curve -->
+            <path d="M 28 100 L 100 84 L 172 68 L 244 56 L 312 50"
+                  fill="none" stroke="#4A6B5F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- Maya's data points -->
+            <circle cx="28"  cy="100" r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="100" cy="84"  r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="172" cy="68"  r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="244" cy="56"  r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="312" cy="50"  r="5" fill="#5A8073" stroke="#FAF7F0" stroke-width="2.5"/>
+
+            <!-- "Now" callout -->
+            <rect x="270" y="28" width="44" height="16" rx="8" fill="#4A6B5F"/>
+            <text x="292" y="39" font-family="Inter" font-size="9" font-weight="700" fill="#FAF7F0" text-anchor="middle">102 cm</text>
+            <line x1="312" y1="44" x2="312" y2="48" stroke="#4A6B5F" stroke-width="1"/>
+
+            <!-- X-axis -->
+            <line x1="28" y1="142" x2="312" y2="142" stroke="#E8E5DD" stroke-width="0.5"/>
+            <text x="28"  y="155" font-family="Inter" font-size="9" fill="#A0A8A4">2y</text>
+            <text x="100" y="155" font-family="Inter" font-size="9" fill="#A0A8A4">2.5y</text>
+            <text x="172" y="155" font-family="Inter" font-size="9" fill="#A0A8A4">3y</text>
+            <text x="244" y="155" font-family="Inter" font-size="9" fill="#A0A8A4">3.5y</text>
+            <text x="312" y="155" font-family="Inter" font-size="9" fill="#A0A8A4" text-anchor="end">4y</text>
+          </svg>
+        </div>
+
+        <!-- WEIGHT VIEW -->
+        <div class="growth-view" data-view="weight">
+          <svg class="growth-chart" viewBox="0 0 320 160" xmlns="http://www.w3.org/2000/svg">
+            <text x="4" y="22"  font-family="Inter" font-size="9" fill="#A0A8A4">20</text>
+            <text x="4" y="58"  font-family="Inter" font-size="9" fill="#A0A8A4">17</text>
+            <text x="4" y="94"  font-family="Inter" font-size="9" fill="#A0A8A4">14</text>
+            <text x="4" y="130" font-family="Inter" font-size="9" fill="#A0A8A4">11</text>
+
+            <line x1="28" y1="20" x2="312" y2="20" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="28" y1="56" x2="312" y2="56" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="28" y1="92" x2="312" y2="92" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="28" y1="128" x2="312" y2="128" stroke="#E8E5DD" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+            <!-- Percentile band -->
+            <path d="M 28 130 L 100 116 L 172 100 L 244 86 L 312 74
+                     L 312 38 L 244 50 L 172 64 L 100 80 L 28 96 Z"
+                  fill="#F4E5C7" opacity="0.55"/>
+
+            <!-- 50th percentile -->
+            <path d="M 28 113 L 100 98 L 172 82 L 244 68 L 312 56"
+                  fill="none" stroke="#A0A8A4" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+            <!-- Maya's curve -->
+            <path d="M 28 110 L 100 96 L 172 84 L 244 72 L 312 64"
+                  fill="none" stroke="#4A6B5F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <circle cx="28"  cy="110" r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="100" cy="96"  r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="172" cy="84"  r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="244" cy="72"  r="4" fill="#4A6B5F" stroke="#FAF7F0" stroke-width="2"/>
+            <circle cx="312" cy="64"  r="5" fill="#5A8073" stroke="#FAF7F0" stroke-width="2.5"/>
+
+            <rect x="266" y="42" width="50" height="16" rx="8" fill="#4A6B5F"/>
+            <text x="291" y="53" font-family="Inter" font-size="9" font-weight="700" fill="#FAF7F0" text-anchor="middle">16.4 kg</text>
+            <line x1="312" y1="58" x2="312" y2="62" stroke="#4A6B5F" stroke-width="1"/>
+
+            <line x1="28" y1="142" x2="312" y2="142" stroke="#E8E5DD" stroke-width="0.5"/>
+            <text x="28"  y="155" font-family="Inter" font-size="9" fill="#A0A8A4">2y</text>
+            <text x="100" y="155" font-family="Inter" font-size="9" fill="#A0A8A4">2.5y</text>
+            <text x="172" y="155" font-family="Inter" font-size="9" fill="#A0A8A4">3y</text>
+            <text x="244" y="155" font-family="Inter" font-size="9" fill="#A0A8A4">3.5y</text>
+            <text x="312" y="155" font-family="Inter" font-size="9" fill="#A0A8A4" text-anchor="end">4y</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="growth-legend">
+        <span><span class="growth-legend-dot maya"></span>Maya</span>
+        <span><span class="growth-legend-dot median"></span>50th percentile</span>
+        <span><span class="growth-legend-band"></span>Healthy range (5–95)</span>
+      </div>
+
+      <!-- Peer comparison -->
+      <div class="peer-comparison">
+        <div class="pc-header">
+          <div class="pc-icon">👧</div>
+          <div>
+            <div class="pc-title">How Maya compares to peers</div>
+            <div class="pc-sub">4-year-old girls · WHO + CDC growth standards</div>
+          </div>
+        </div>
+        <div class="pc-stat-row" style="border-top: none;">
+          <div class="pc-stat-label">Height</div>
+          <div class="pc-stat-bar">
+            <div class="pc-stat-fill" style="width: 60%;"></div>
+            <div class="pc-stat-marker" style="left: 60%;"></div>
+          </div>
+          <div class="pc-stat-text">Taller than ~60%</div>
+        </div>
+        <div class="pc-stat-row">
+          <div class="pc-stat-label">Weight</div>
+          <div class="pc-stat-bar">
+            <div class="pc-stat-fill" style="width: 55%;"></div>
+            <div class="pc-stat-marker" style="left: 55%;"></div>
+          </div>
+          <div class="pc-stat-text">Heavier than ~55%</div>
+        </div>
+        <div class="pc-stat-row">
+          <div class="pc-stat-label">BMI</div>
+          <div class="pc-badge ok">Healthy weight for her height</div>
+        </div>
+      </div>
+
+      <!-- Monthly reminder -->
+      <div class="measure-inline">
+        <span style="font-size:16px;">⏰</span>
+        <div><strong>It's been 32 days since your last measurement.</strong> Tap below — takes 1 minute.</div>
+      </div>
+
+      <button class="growth-update-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Log new measurement
+      </button>
+    </div>
+
+    <!-- Longitudinal history -->
+    <div class="history-card">
+      <div class="history-head">
+        <div class="tg-title">Balance score over time</div>
+        <div class="history-range">
+          <button>4w</button>
+          <button class="active">12w</button>
+          <button>1y</button>
+          <button>All</button>
+        </div>
+      </div>
+      <div class="history-chart">
+        <div class="history-bar low" style="height: 30%;"></div>
+        <div class="history-bar low" style="height: 35%;"></div>
+        <div class="history-bar med" style="height: 50%;"></div>
+        <div class="history-bar med" style="height: 45%;"></div>
+        <div class="history-bar med" style="height: 55%;"></div>
+        <div class="history-bar med" style="height: 60%;"></div>
+        <div class="history-bar" style="height: 65%;"></div>
+        <div class="history-bar med" style="height: 58%;"></div>
+        <div class="history-bar" style="height: 70%;"></div>
+        <div class="history-bar" style="height: 72%;"></div>
+        <div class="history-bar" style="height: 78%;"></div>
+        <div class="history-bar" style="height: 82%;"></div>
+      </div>
+      <div class="history-axis">
+        <span>Feb 1</span>
+        <span>Mar 1</span>
+        <span>Apr 1</span>
+        <span>Apr 24</span>
+      </div>
+      <div class="history-meta">
+        <div class="history-meta-cell">
+          <div class="history-meta-num">+24%</div>
+          <div class="history-meta-lbl">Avg balance vs Feb</div>
+        </div>
+        <div class="history-meta-cell warm">
+          <div class="history-meta-num">12</div>
+          <div class="history-meta-lbl">Meal streak (days)</div>
+        </div>
+        <div class="history-meta-cell alt">
+          <div class="history-meta-num">3</div>
+          <div class="history-meta-lbl">Unrecorded · est.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Taste graph -->
+    <div class="taste-graph">
+      <div class="tg-header">
+        <div class="tg-title">Acceptance probability</div>
+        <div class="tg-legend">Higher = more likely to eat</div>
+      </div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Sweet potato</div><div class="veggie-bar-track"><div class="veggie-bar-fill high" style="width:94%;"></div></div><div class="veggie-bar-pct">94%</div></div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Tomato sauce</div><div class="veggie-bar-track"><div class="veggie-bar-fill high" style="width:88%;"></div></div><div class="veggie-bar-pct">88%</div></div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Carrot</div><div class="veggie-bar-track"><div class="veggie-bar-fill high" style="width:78%;"></div></div><div class="veggie-bar-pct">78%</div></div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Spinach</div><div class="veggie-bar-track"><div class="veggie-bar-fill med" style="width:54%;"></div></div><div class="veggie-bar-pct">54%</div></div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Bell pepper</div><div class="veggie-bar-track"><div class="veggie-bar-fill med" style="width:41%;"></div></div><div class="veggie-bar-pct">41%</div></div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Broccoli</div><div class="veggie-bar-track"><div class="veggie-bar-fill low" style="width:22%;"></div></div><div class="veggie-bar-pct">22%</div></div>
+      <div class="veggie-bar"><div class="veggie-bar-name">Mushroom</div><div class="veggie-bar-track"><div class="veggie-bar-fill low" style="width:14%;"></div></div><div class="veggie-bar-pct">14%</div></div>
+    </div>
+
+    <div class="veggie-collection">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <div class="tg-title">Veggie friends collected</div>
+        <div style="font-size:11px; color:var(--ink-soft);">7 of 24</div>
+      </div>
+      <div class="vc-grid">
+        <div class="vc-item unlocked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><path d="M22 8 C19 16, 18 24, 20 36 C22 38, 22 38, 24 36 C26 24, 25 16, 22 8 Z" fill="#D88463"/><path d="M22 8 C20 4, 17 4, 18 8 M22 8 C24 3, 27 4, 26 8" stroke="#5A8073" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></div><div class="vc-name">Curio</div><div class="vc-count">×8</div></div>
+        <div class="vc-item unlocked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><circle cx="22" cy="26" r="14" fill="#C95C4D"/><path d="M22 12 L18 8 L22 10 L26 8 L24 12" fill="#5A8073"/></svg></div><div class="vc-name">Tommy</div><div class="vc-count">×12</div></div>
+        <div class="vc-item unlocked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><ellipse cx="22" cy="26" rx="12" ry="14" fill="#E5B96A"/><path d="M22 12 L20 7 L24 7" stroke="#5A8073" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div><div class="vc-name">Sunny</div><div class="vc-count">×4</div></div>
+        <div class="vc-item unlocked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><ellipse cx="22" cy="28" rx="14" ry="10" fill="#8B5A6B"/><path d="M22 18 L20 13 L24 13" stroke="#5A8073" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div><div class="vc-name">Beety</div><div class="vc-count">×3</div></div>
+        <div class="vc-item locked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><circle cx="14" cy="16" r="6" fill="#5A8073"/><circle cx="22" cy="12" r="7" fill="#5A8073"/><circle cx="30" cy="16" r="6" fill="#5A8073"/><path d="M18 22 L18 32 L26 32 L26 22 Z" fill="#E8DCB8"/></svg></div><div class="vc-name">Brock</div><div class="vc-count">Try 1×</div></div>
+        <div class="vc-item locked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><ellipse cx="22" cy="22" rx="10" ry="14" fill="#A8BFA8"/></svg></div><div class="vc-name">Pepi</div><div class="vc-count">Locked</div></div>
+        <div class="vc-item locked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44"><circle cx="22" cy="22" r="14" fill="#97BC62"/></svg></div><div class="vc-name">Pea-Pea</div><div class="vc-count">Locked</div></div>
+        <div class="vc-item locked"><div class="vc-circle"><svg width="36" height="36" viewBox="0 0 44 44" opacity="0.4"><circle cx="22" cy="22" r="14" fill="#A0A8A4"/></svg></div><div class="vc-name">+17 more</div><div class="vc-count">Keep going</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= FRIENDS ========= -->
+  <div id="screen-friends" class="screen">
+    <div class="insights-header">
+      <button class="confirm-back" onclick="goToApp('home')" style="margin-bottom:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Home
+      </button>
+      <h2 class="insights-title">Veggie Friends</h2>
+      <p class="insights-sub">Each character unlocks new stories, songs, and AR mini-games when Maya tries them.</p>
+    </div>
+    <div class="friends-grid">
+      <div class="friend-card">
+        <div class="friend-art warm"><svg width="56" height="56" viewBox="0 0 44 44"><path d="M22 8 C19 16, 18 24, 20 36 C22 38, 22 38, 24 36 C26 24, 25 16, 22 8 Z" fill="#D88463"/><path d="M22 8 C20 4, 17 4, 18 8 M22 8 C24 3, 27 4, 26 8" stroke="#5A8073" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="19" cy="20" r="1.4" fill="#1A201E"/><circle cx="25" cy="20" r="1.4" fill="#1A201E"/><path d="M19 25 Q22 27 25 25" stroke="#1A201E" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+        <div class="friend-name">Curio the Carrot</div>
+        <div class="friend-tag">3 stories · 2 games</div>
+        <div class="friend-progress"><div class="friend-progress-fill" style="width:80%;"></div></div>
+      </div>
+      <div class="friend-card">
+        <div class="friend-art tomato"><svg width="56" height="56" viewBox="0 0 44 44"><circle cx="22" cy="26" r="14" fill="#C95C4D"/><path d="M22 12 L18 8 L22 10 L26 8 L24 12" fill="#5A8073"/><circle cx="18" cy="24" r="1.4" fill="#1A201E"/><circle cx="26" cy="24" r="1.4" fill="#1A201E"/><path d="M18 30 Q22 32 26 30" stroke="#1A201E" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+        <div class="friend-name">Tommy Tomato</div>
+        <div class="friend-tag">5 stories · 3 games</div>
+        <div class="friend-progress"><div class="friend-progress-fill" style="width:100%;"></div></div>
+      </div>
+      <div class="friend-card">
+        <div class="friend-art gold"><svg width="56" height="56" viewBox="0 0 44 44"><ellipse cx="22" cy="26" rx="12" ry="14" fill="#E5B96A"/><path d="M22 12 L20 7 L24 7" stroke="#5A8073" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="18" cy="24" r="1.4" fill="#1A201E"/><circle cx="26" cy="24" r="1.4" fill="#1A201E"/><path d="M18 30 Q22 32 26 30" stroke="#1A201E" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+        <div class="friend-name">Sunny Squash</div>
+        <div class="friend-tag">2 stories · 1 game</div>
+        <div class="friend-progress"><div class="friend-progress-fill" style="width:50%;"></div></div>
+      </div>
+      <div class="friend-card" style="opacity:0.7;">
+        <div class="friend-art"><svg width="56" height="56" viewBox="0 0 44 44"><circle cx="14" cy="16" r="6" fill="#5A8073"/><circle cx="22" cy="12" r="7" fill="#5A8073"/><circle cx="30" cy="16" r="6" fill="#5A8073"/><circle cx="20" cy="20" r="5" fill="#4A6B5F"/><path d="M18 24 L18 34 Q18 36 20 36 L24 36 Q26 36 26 34 L26 24 Z" fill="#E8DCB8"/></svg></div>
+        <div class="friend-name">Brock Broccoli</div>
+        <div class="friend-tag" style="color:var(--carrot); font-weight:600;">Try 1× to unlock</div>
+        <div class="friend-progress"><div class="friend-progress-fill" style="width:0%;"></div></div>
+      </div>
+    </div>
+    <div style="margin: 18px 20px 0; padding: 18px 20px; background: var(--ink); color: var(--cream-soft); border-radius: var(--radius); display:flex; gap:14px; align-items:center;">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <div style="flex:1;">
+        <div style="font-family:'Fraunces',serif; font-size:15px; font-weight:600;">Tonight's bedtime story</div>
+        <div style="font-size:12px; opacity:0.75; margin-top:2px;">"Tommy & the Stolen Sauce" — 6 min</div>
+      </div>
+      <button style="background:var(--cream-soft); color:var(--ink); border:none; padding:8px 14px; border-radius:100px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer;">Play</button>
+    </div>
+  </div>
+
+  <!-- ========= BOTTOM NAV ========= -->
+  <div class="bottom-nav" id="bottomNav" style="display:none;">
+    <button class="nav-item active" data-screen="home" onclick="goToApp('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L12 4l9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" data-screen="plan" onclick="goToApp('plan')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Plan</span>
+    </button>
+    <button class="nav-item nav-snap" data-screen="snap" onclick="openSnap('before')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>Snap</span>
+    </button>
+    <button class="nav-item" data-screen="insights" onclick="goToApp('insights')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Insights</span>
+    </button>
+    <button class="nav-item" data-screen="friends" onclick="goToApp('friends')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><circle cx="6" cy="16" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span>Friends</span>
+    </button>
+  </div>
+</div>
+
+<div class="pagefoot">
+  Walk through onboarding (with diet/allergies + 300-food taste test), then try the Snap flow:<br>
+  <strong>Snap a meal</strong> → confirms what's on the plate → from Home tap <strong>"Lunch is in progress"</strong> to snap the After photo → Maya's full balance analysis with personalized recommendations.
+</div>
+
+<script>
+  const APP_SCREENS = ['home','snap','confirm','mealAnalysis','describeMeal','plan','insights','friends','tasteTest'];
+  const ALL_SCREENS = ['welcome','onb1','diet','onb2','onb3', ...APP_SCREENS];
+  const NAV_VISIBLE_ON = ['home','plan','insights','friends','snap','confirm','mealAnalysis','describeMeal'];
+
+  let snapMode = 'before';
+
+  function goTo(name) {
+    ALL_SCREENS.forEach(s => {
+      const el = document.getElementById('screen-' + s);
+      if (el) el.classList.toggle('active', s === name);
+    });
+    const nav = document.getElementById('bottomNav');
+    nav.style.display = NAV_VISIBLE_ON.includes(name) ? 'flex' : 'none';
+    const active = document.getElementById('screen-' + name);
+    if (active) active.scrollTop = 0;
+  }
+
+  function goToApp(name) {
+    goTo(name);
+    document.querySelectorAll('#bottomNav .nav-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.screen === name);
+    });
+    if (name === 'snap') {
+      resetSnap();
+    }
+  }
+
+  function openSnap(mode) {
+    snapMode = mode;
+    setSnapMode(mode);
+    goToApp('snap');
+  }
+
+  function setSnapMode(mode) {
+    snapMode = mode;
+    document.querySelectorAll('.snap-mode-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === mode)
+    );
+    const title = document.getElementById('snapTitle');
+    const status = document.getElementById('snapStatus');
+    const grains = document.getElementById('couscous-grains');
+
+    if (mode === 'before') {
+      title.textContent = 'Snap a meal · Before';
+      status.innerHTML = "Center the plate in frame — we'll detect food and portions automatically.";
+      // Show full plate
+      const foods = document.getElementById('plate-foods');
+      if (foods) foods.style.opacity = '1';
+    } else {
+      title.textContent = 'Snap how much was eaten · After';
+      status.innerHTML = "We'll compare to your before photo to see what Maya actually ate.";
+      // Indicate "less food" by making it slightly faded — visual hint
+      const foods = document.getElementById('plate-foods');
+      if (foods) foods.style.opacity = '0.5';
+    }
+    resetSnap(true);
+  }
+
+  function resetSnap(keepMode) {
+    ['box1','box2','box3'].forEach(id => document.getElementById(id).classList.remove('show'));
+    const sl = document.getElementById('scanline'); if (sl) sl.classList.remove('hide');
+    const dv = document.getElementById('dancingVeggies'); if (dv) dv.classList.remove('show');
+    if (!keepMode) {
+      const status = document.getElementById('snapStatus');
+      if (status) status.innerHTML = "Center the plate in frame — we'll detect food and portions automatically.";
+    }
+  }
+
+  function runDetection() {
+    const status = document.getElementById('snapStatus');
+    const scan = document.getElementById('scanline');
+    const dv = document.getElementById('dancingVeggies');
+    status.innerHTML = "<strong>Detecting…</strong> identifying foods and portions";
+
+    setTimeout(() => document.getElementById('box1').classList.add('show'), 300);
+    setTimeout(() => document.getElementById('box2').classList.add('show'), 700);
+    setTimeout(() => document.getElementById('box3').classList.add('show'), 1100);
+
+    setTimeout(() => {
+      scan.classList.add('hide');
+      if (snapMode === 'before') {
+        status.innerHTML = "<strong>3 foods found</strong> · 92% avg confidence · 🥦🥕 healthy bonus!";
+        // Trigger dancing veggies celebration
+        if (dv) dv.classList.add('show');
+      } else {
+        status.innerHTML = "<strong>Comparing…</strong> calculating what was eaten";
+      }
+    }, 1500);
+
+    setTimeout(() => {
+      if (snapMode === 'before') {
+        goToApp('confirm');
+      } else {
+        goToApp('mealAnalysis');
+      }
+    }, 2800);
+  }
+
+  // Skip / undo Height + Weight in onboarding
+  function toggleSkipHW() {
+    const fields = document.getElementById('hwFields');
+    const btn = document.getElementById('skipHwBtn');
+    const pill = document.getElementById('hwSkippedPill');
+    const skipped = fields.style.display === 'none';
+    if (skipped) {
+      // Undo skip
+      fields.style.display = 'grid';
+      pill.style.display = 'none';
+      btn.textContent = 'Skip — add later';
+      document.getElementById('heightInput').value = '102';
+      document.getElementById('weightInput').value = '16.4';
+    } else {
+      // Skip
+      fields.style.display = 'none';
+      pill.style.display = 'flex';
+      btn.textContent = 'Add now';
+      document.getElementById('heightInput').value = '';
+      document.getElementById('weightInput').value = '';
+    }
+  }
+
+  // Onboarding handlers
+  document.querySelectorAll('#ageGrid .age-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('#ageGrid .age-pill').forEach(x => x.classList.remove('selected'));
+      p.classList.add('selected');
+    });
+  });
+
+  document.querySelectorAll('#habitsList .habit-row').forEach(r => {
+    r.addEventListener('click', () => r.classList.toggle('selected'));
+  });
+
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      const group = c.dataset.single;
+      if (group) {
+        c.parentElement.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+        c.classList.add('selected');
+      } else {
+        c.classList.toggle('selected');
+      }
+    });
+  });
+
+  document.querySelectorAll('.week-strip .day-pill').forEach(d => {
+    d.addEventListener('click', () => {
+      document.querySelectorAll('.week-strip .day-pill').forEach(x => x.classList.remove('active'));
+      d.classList.add('active');
+    });
+  });
+
+  // Time pills (describe a meal)
+  document.querySelectorAll('.time-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('.time-pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+    });
+  });
+
+  // Growth chart toggle (Height / Weight)
+  document.querySelectorAll('#growthToggle button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#growthToggle button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      const mode = b.dataset.mode;
+      document.querySelectorAll('.growth-view').forEach(v =>
+        v.classList.toggle('active', v.dataset.view === mode)
+      );
+      const num = document.getElementById('growthNum');
+      const pct = document.getElementById('growthPercentile');
+      const trend = document.getElementById('growthTrend');
+      if (mode === 'weight') {
+        num.innerHTML = '16.4<span class="growth-unit">kg</span>';
+        pct.textContent = '55th %ile';
+        trend.textContent = '↑ +0.6kg in 2 mo';
+      } else {
+        num.innerHTML = '102<span class="growth-unit">cm</span>';
+        pct.textContent = '60th %ile';
+        trend.textContent = '↑ steady curve';
+      }
+    });
+  });
+
+  // Update onb1 confirmation summary in step 4 to reflect gender (set on chip click)
+  document.querySelectorAll('.chip[data-single="gender"]').forEach(c => {
+    // chip click handled by generic .chip handler — no extra logic needed for now
+  });
+
+  // Insights date range
+  document.querySelectorAll('.history-range button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.history-range button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+
+  // Taste test
+  document.querySelectorAll('.tt-cat').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.tt-cat').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.food-card').forEach(card => {
+    const grid = card.querySelector('.rating-grid');
+    if (!grid) return;
+    grid.addEventListener('click', e => {
+      const btn = e.target.closest('.rating-btn');
+      if (!btn) return;
+      const wasSelected = btn.classList.contains('selected');
+      grid.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+      const badge = card.querySelector('.food-rated-badge');
+      if (badge) badge.remove();
+      if (!wasSelected) {
+        btn.classList.add('selected');
+        card.classList.add('rated');
+        const types = { love:['love','❤️ Loves'], ok:['ok','👍 OK'], meh:['meh','🤷 Maybe'], no:['no','👎 Not really'], hardno:['hardno','🚫 Hard no'], unsure:['unsure','❓ Not sure'] };
+        const cls = ['love','ok','meh','no','hardno','unsure'].find(c => btn.classList.contains(c));
+        if (cls && types[cls]) {
+          const b = document.createElement('span');
+          b.className = 'food-rated-badge ' + types[cls][0];
+          b.textContent = types[cls][1];
+          card.querySelector('.food-head').appendChild(b);
+        }
+        bumpProgress(1);
+      } else {
+        card.classList.remove('rated');
+        bumpProgress(-1);
+      }
+    });
+  });
+
+  let ttCount = 55;
+  const ttTotal = 300;
+  function bumpProgress(delta) {
+    ttCount = Math.max(0, Math.min(ttTotal, ttCount + delta));
+    const num = document.getElementById('ttProgressNum');
+    const bar = document.getElementById('ttProgressBar');
+    if (num) num.textContent = ttCount;
+    if (bar) bar.style.width = (ttCount / ttTotal * 100).toFixed(1) + '%';
+  }
+</script>
+
+</body>
+</html>
