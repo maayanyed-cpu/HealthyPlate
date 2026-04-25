@@ -39,7 +39,11 @@ function SnapInner() {
   const [progress, setProgress] = useState(0);
   const [detectedFoods, setDetectedFoods] = useState<DetectedFood[]>([]);
   const [resultMealId, setResultMealId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  /* Two separate inputs: one with `capture` for the shutter (camera-only),
+     one without for the library button (so iOS shows the gallery picker
+     instead of locking to camera). */
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -154,7 +158,7 @@ function SnapInner() {
     if (pickedFile) {
       triggerShutter(pickedFile);
     } else {
-      fileInputRef.current?.click();
+      cameraInputRef.current?.click();
     }
   }
 
@@ -176,10 +180,20 @@ function SnapInner() {
   return (
     <div className="screen text-cream-soft" style={{ background: "#1A201E", paddingBottom: 0 }}>
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handlePickFile(file);
+        }}
+      />
+      <input
+        ref={libraryInputRef}
+        type="file"
+        accept="image/*"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -376,7 +390,7 @@ function SnapInner() {
               <button
                 type="button"
                 aria-label="Photo library"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => libraryInputRef.current?.click()}
                 className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
