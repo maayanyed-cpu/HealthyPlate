@@ -3,14 +3,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentChild } from "@/lib/getCurrentChild";
 import PlateSvg from "@/components/PlateSvg";
+import { DetectedFoodsGrid } from "@/components/DetectedFoodsGrid";
 
 export const dynamic = "force-dynamic";
-
-function portionLabel(grams: number): string {
-  if (grams >= 70) return `≈ ½ cup · ~${grams} g`;
-  if (grams >= 35) return `≈ ⅓ cup · ~${grams} g`;
-  return `≈ ¼ cup · ~${grams} g`;
-}
 
 export default async function ConfirmPage({
   searchParams,
@@ -69,31 +64,18 @@ export default async function ConfirmPage({
         We found {meal.detected.length} foods
       </div>
       <div className="px-6 pb-4 text-[13px] text-ink-soft">
-        Tap any item to fix the name or portion. Every correction trains{" "}
-        {name}&apos;s model.
+        Tap any veggie to hear them sing! Each one tells {name} why they&apos;re
+        magical. <span aria-hidden>🎵</span>
       </div>
 
-      <div className="px-5 flex flex-col gap-2">
-        {meal.detected.map((d) => (
-          <div
-            key={d.id}
-            className="bg-surface border border-line rounded-[20px] px-4 py-3.5 flex items-center gap-3"
-          >
-            <div className="w-[38px] h-[38px] bg-cream rounded-xl flex items-center justify-center text-[22px] flex-shrink-0">
-              {d.emoji}
-            </div>
-            <div className="flex-1">
-              <div className="text-[14px] font-semibold text-ink">{d.name}</div>
-              <div className="text-[12px] text-ink-soft mt-0.5">
-                {portionLabel(d.portionGrams)}
-              </div>
-            </div>
-            <span className="text-[11px] font-semibold text-sage-deep bg-sage-pale px-2 py-0.5 rounded-full">
-              {d.confidence}%
-            </span>
-          </div>
-        ))}
-      </div>
+      <DetectedFoodsGrid
+        foods={meal.detected.map((d) => ({
+          id: d.id,
+          name: d.name,
+          emoji: d.emoji,
+          portionGrams: d.portionGrams,
+        }))}
+      />
 
       <div className="mx-5 mt-4 px-4 py-3.5 bg-sage-pale rounded-[20px] flex gap-3 items-start">
         <div className="flex-shrink-0 w-8 h-8 bg-sage-deep rounded-full flex items-center justify-center">

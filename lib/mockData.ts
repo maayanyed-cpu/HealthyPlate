@@ -20,53 +20,6 @@ export const FOODS: Food[] = [
   { id: "chicken", name: "Roast chicken", emoji: "🍗", category: "protein" },
 ];
 
-/* The single hardcoded "lunch" we surface throughout the snap → confirm → analysis flow.
-   Real vision API stub for v0 — same plate every time. */
-export type DetectedFood = {
-  foodId: string;
-  name: string;
-  emoji: string;
-  portionLabel: string;
-  portionGrams: number;
-  confidence: number;
-  /* % consumed when the after-shot is taken. Drives the analysis screen. */
-  percentEaten: number;
-  box: { top: string; left: string; width: string; height: string };
-};
-
-export const SNAP_DETECTION: DetectedFood[] = [
-  {
-    foodId: "carrot",
-    name: "Roasted carrot",
-    emoji: "🥕",
-    portionLabel: "≈ ⅓ cup · ~45 g",
-    portionGrams: 45,
-    confidence: 92,
-    percentEaten: 70,
-    box: { top: "38%", left: "22%", width: "30%", height: "14%" },
-  },
-  {
-    foodId: "broccoli",
-    name: "Steamed broccoli",
-    emoji: "🥦",
-    portionLabel: "≈ ¼ cup · ~30 g",
-    portionGrams: 30,
-    confidence: 96,
-    percentEaten: 25,
-    box: { top: "36%", left: "55%", width: "22%", height: "14%" },
-  },
-  {
-    foodId: "couscous",
-    name: "Couscous",
-    emoji: "🌾",
-    portionLabel: "≈ ½ cup · ~80 g",
-    portionGrams: 80,
-    confidence: 88,
-    percentEaten: 90,
-    box: { top: "58%", left: "38%", width: "32%", height: "18%" },
-  },
-];
-
 export const TODAYS_PLAN = [
   {
     time: "Breakfast · 8:00",

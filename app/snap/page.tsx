@@ -3,13 +3,19 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
+import confetti from "canvas-confetti";
 import PlateSvg from "@/components/PlateSvg";
-import { SNAP_DETECTION } from "@/lib/mockData";
-import { saveBeforeSnap, saveAfterSnap } from "./actions";
 
-type Phase = "idle" | "scanning" | "revealed";
+type Phase = "idle" | "scanning" | "celebrating";
 type Mode = "before" | "after";
+
+type DetectedFood = {
+  name: string;
+  emoji: string;
+  portionGrams: number;
+  category: "vegetable" | "fruit" | "protein" | "grain" | "dairy" | "other";
+  box: { x: number; y: number; width: number; height: number };
+};
 
 export default function SnapPage() {
   return (
@@ -30,14 +36,65 @@ function SnapInner() {
   const [error, setError] = useState<string | null>(null);
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [detectedFoods, setDetectedFoods] = useState<DetectedFood[]>([]);
+  const [resultMealId, setResultMealId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* Revoke any object URL when the component unmounts or the file changes */
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  /* Animate the Meal Power-Up bar while scanning. Curve approaches ~88% over
+     ~7s — leaves headroom so the jump-to-100% on response feels earned. */
+  useEffect(() => {
+    if (phase !== "scanning") return;
+    setProgress(0);
+    const start = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const target = 88 * (1 - Math.exp(-elapsed / 4));
+      setProgress(target);
+    }, 80);
+    return () => clearInterval(interval);
+  }, [phase]);
+
+  /* Big finish: confetti + audio when we enter the celebrating phase. */
+  useEffect(() => {
+    if (phase !== "celebrating") return;
+    console.log("[snap] celebrating with", detectedFoods.length, "characters:", detectedFoods.map((f) => f.name));
+
+    const palette = ["#5A8073", "#D88463", "#E5B96A", "#FAF7F0", "#8B5A6B", "#B8E1B8"];
+    confetti({
+      particleCount: 120,
+      spread: 90,
+      startVelocity: 45,
+      origin: { y: 0.45 },
+      colors: palette,
+    });
+    const t1 = setTimeout(() => {
+      confetti({ particleCount: 70, spread: 110, origin: { x: 0.15, y: 0.5 }, colors: palette });
+    }, 220);
+    const t2 = setTimeout(() => {
+      confetti({ particleCount: 70, spread: 110, origin: { x: 0.85, y: 0.5 }, colors: palette });
+    }, 440);
+
+    /* Audio track lives at /public/HealthyPlate.mp4 — new Audio() plays the
+       audio track of the MP4 file. Silent fallback if the file goes missing. */
+    const audio = new Audio("/HealthyPlate.mp4");
+    audio.volume = 0.6;
+    audio.play().catch((err) => {
+      console.log("[snap] HealthyPlate.mp4 not playing:", err);
+    });
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      audio.pause();
+    };
+  }, [phase]);
 
   function handlePickFile(file: File) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -45,8 +102,6 @@ function SnapInner() {
     setPickedFile(file);
     setPreviewUrl(url);
     setError(null);
-    /* Auto-trigger the shutter once a file is picked — feels native on mobile,
-       since opening the camera + tapping shutter is one flow on iOS/Android. */
     triggerShutter(file);
   }
 
@@ -54,39 +109,41 @@ function SnapInner() {
     if (phase !== "idle") return;
     setError(null);
     setPhase("scanning");
-    const startTime = Date.now();
-
-    setTimeout(() => setPhase("revealed"), 1400);
 
     (async () => {
       try {
-        let blobUrl: string | null = null;
-        if (fileForUpload) {
-          const blob = await upload(fileForUpload.name, fileForUpload, {
-            access: "public",
-            handleUploadUrl: "/api/blob/upload",
-          });
-          blobUrl = blob.url;
+        if (!fileForUpload) {
+          throw new Error("Need a photo to identify foods. Tap the shutter to pick one.");
+        }
+        if (mode === "after" && !incomingMealId) {
+          throw new Error("Missing mealId for after-shot. Start a new before-shot.");
         }
 
-        let nextHref: string;
-        if (mode === "before") {
-          const { mealId } = await saveBeforeSnap(blobUrl);
-          nextHref = `/snap/confirm?mealId=${mealId}`;
-        } else {
-          if (!incomingMealId) {
-            throw new Error("Missing mealId for after-shot. Start a new before-shot.");
-          }
-          await saveAfterSnap(incomingMealId, blobUrl);
-          nextHref = `/snap/analysis?mealId=${incomingMealId}`;
+        const formData = new FormData();
+        formData.append("file", fileForUpload);
+        formData.append("mode", mode);
+        if (mode === "after" && incomingMealId) {
+          formData.append("mealId", incomingMealId);
         }
+        const res = await fetch("/api/blob/upload", { method: "POST", body: formData });
+        if (!res.ok) {
+          const errBody = await res.text();
+          throw new Error(`Upload failed (${res.status}): ${errBody}`);
+        }
+        const data = (await res.json()) as { mealId: string; foods?: DetectedFood[] };
+        console.log("[snap] processed, mealId:", data.mealId, "foods:", data.foods?.length);
 
-        const MIN_ANIMATION_MS = 3000;
-        const elapsed = Date.now() - startTime;
-        const wait = Math.max(0, MIN_ANIMATION_MS - elapsed);
-        setTimeout(() => router.push(nextHref), wait);
+        setProgress(100);
+        setResultMealId(data.mealId);
+        if (data.foods) setDetectedFoods(data.foods);
+
+        /* Brief beat so the user sees the bar fill before the celebration. */
+        setTimeout(() => setPhase("celebrating"), 350);
       } catch (e) {
+        console.error("[snap] error:", e);
         setPhase("idle");
+        setProgress(0);
+        setDetectedFoods([]);
         setError(e instanceof Error ? e.message : "Something went wrong saving the snap.");
       }
     })();
@@ -94,8 +151,6 @@ function SnapInner() {
 
   function handleShutterClick() {
     if (phase !== "idle") return;
-    /* If user already picked a file, run with it. Otherwise open file picker
-       (which will auto-trigger via handlePickFile -> triggerShutter). */
     if (pickedFile) {
       triggerShutter(pickedFile);
     } else {
@@ -103,26 +158,23 @@ function SnapInner() {
     }
   }
 
-  function handleSkipFilePicker() {
-    /* Demo path: shutter without a real photo, falls back to the SVG plate. */
-    triggerShutter(null);
+  function resetPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPickedFile(null);
+    setPreviewUrl(null);
   }
 
-  const statusText =
-    phase === "idle"
-      ? mode === "before"
-        ? "Tap the shutter to pick a meal photo — we'll detect food and portions."
-        : "Tap the shutter to snap how much was eaten."
-      : phase === "scanning"
-      ? "Identifying foods…"
-      : "Found 3 items ✓";
+  function handleContinue() {
+    if (!resultMealId) return;
+    const nextHref =
+      mode === "before"
+        ? `/snap/confirm?mealId=${resultMealId}`
+        : `/snap/analysis?mealId=${resultMealId}`;
+    router.push(nextHref);
+  }
 
   return (
-    <div
-      className="screen text-cream-soft"
-      style={{ background: "#1A201E", paddingBottom: 0 }}
-    >
-      {/* Hidden file input — drives both shutter and "Library" button */}
+    <div className="screen text-cream-soft" style={{ background: "#1A201E", paddingBottom: 0 }}>
       <input
         ref={fileInputRef}
         type="file"
@@ -147,62 +199,45 @@ function SnapInner() {
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </Link>
-        <div className="text-[13px] font-semibold">Snap a meal</div>
-        <button
-          type="button"
-          onClick={handleSkipFilePicker}
-          aria-label="Use demo plate"
-          disabled={phase !== "idle"}
-          title="Skip the file picker and use the demo plate"
-          className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-cream-soft text-[14px] disabled:opacity-50"
-        >
-          ✨
-        </button>
+        <div className="text-[13px] font-semibold">
+          {phase === "celebrating" ? "Power-Up complete!" : "Snap a meal"}
+        </div>
+        <div className="w-9 h-9" />
       </div>
 
-      {/* Mode toggle */}
-      <div className="mx-5 mb-2 bg-white/[0.08] rounded-full p-1 grid grid-cols-2 gap-0.5">
-        <button
-          type="button"
-          onClick={() => setMode("before")}
-          disabled={phase !== "idle"}
-          className={
-            "py-2 rounded-full text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all " +
-            (mode === "before"
-              ? "bg-cream-soft text-ink"
-              : "text-white/60 hover:text-white/80")
-          }
-        >
-          <span
+      {/* Mode toggle — only when idle */}
+      {phase === "idle" && (
+        <div className="mx-5 mb-2 bg-white/[0.08] rounded-full p-1 grid grid-cols-2 gap-0.5">
+          <button
+            type="button"
+            onClick={() => setMode("before")}
             className={
-              "w-1.5 h-1.5 rounded-full " +
-              (mode === "before" ? "bg-sage-deep" : "bg-current opacity-50")
+              "py-2 rounded-full text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all " +
+              (mode === "before"
+                ? "bg-cream-soft text-ink"
+                : "text-white/60 hover:text-white/80")
             }
-          />
-          Before
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("after")}
-          disabled={phase !== "idle"}
-          className={
-            "py-2 rounded-full text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all " +
-            (mode === "after"
-              ? "bg-cream-soft text-ink"
-              : "text-white/60 hover:text-white/80")
-          }
-        >
-          <span
+          >
+            <span className={"w-1.5 h-1.5 rounded-full " + (mode === "before" ? "bg-sage-deep" : "bg-current opacity-50")} />
+            Before
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("after")}
             className={
-              "w-1.5 h-1.5 rounded-full " +
-              (mode === "after" ? "bg-sage-deep" : "bg-current opacity-50")
+              "py-2 rounded-full text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all " +
+              (mode === "after"
+                ? "bg-cream-soft text-ink"
+                : "text-white/60 hover:text-white/80")
             }
-          />
-          After eating
-        </button>
-      </div>
+          >
+            <span className={"w-1.5 h-1.5 rounded-full " + (mode === "after" ? "bg-sage-deep" : "bg-current opacity-50")} />
+            After eating
+          </button>
+        </div>
+      )}
 
-      {/* Viewfinder */}
+      {/* Viewfinder + AR overlays */}
       <div
         className="mx-5 mt-2 rounded-[28px] relative overflow-hidden flex items-center justify-center"
         style={{
@@ -212,104 +247,205 @@ function SnapInner() {
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="Meal preview" className="w-full h-full object-cover" />
-        ) : (
-          <PlateSvg
-            className="w-[80%] h-auto"
-            variant={mode === "after" ? "after" : "before"}
+          <img
+            src={previewUrl}
+            alt="Meal preview"
+            className={
+              "w-full h-full " +
+              (phase === "idle" ? "object-cover" : "object-contain")
+            }
           />
+        ) : (
+          <PlateSvg className="w-[80%] h-auto" variant={mode === "after" ? "after" : "before"} />
         )}
 
-        {/* Detection boxes */}
-        {phase === "revealed" &&
-          SNAP_DETECTION.map((d, i) => (
-            <div
-              key={d.foodId}
-              className="absolute border-2 rounded-[8px] animate-reveal-box"
-              style={{
-                top: d.box.top,
-                left: d.box.left,
-                width: d.box.width,
-                height: d.box.height,
-                borderColor: "#B8E1B8",
-                boxShadow: "0 0 0 1px rgba(0,0,0,0.2)",
-                animationDelay: `${i * 0.12}s`,
-                opacity: 0,
-              }}
-            >
-              <span
-                className="absolute -top-[22px] left-0 px-2 py-0.5 rounded-[6px] text-[10px] font-bold whitespace-nowrap"
-                style={{ background: "#B8E1B8", color: "#1A201E" }}
-              >
-                {d.name.split(" ").slice(-1)[0]} · {d.confidence}%
-              </span>
-            </div>
-          ))}
-
-        {/* Scan line */}
+        {/* Scan zone — corner brackets, dim, scan line — during scanning */}
         {phase === "scanning" && (
-          <div
-            className="absolute left-0 right-0 h-0.5 animate-scan"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, #B8E1B8, transparent)",
-              boxShadow: "0 0 12px #B8E1B8",
-            }}
-          />
+          <>
+            <div className="absolute inset-0 bg-black/30 pointer-events-none animate-fade-in" />
+            <div className="absolute top-3 left-3 w-7 h-7 border-t-[3px] border-l-[3px] border-[#B8E1B8] rounded-tl-[12px] pointer-events-none" />
+            <div className="absolute top-3 right-3 w-7 h-7 border-t-[3px] border-r-[3px] border-[#B8E1B8] rounded-tr-[12px] pointer-events-none" />
+            <div className="absolute bottom-3 left-3 w-7 h-7 border-b-[3px] border-l-[3px] border-[#B8E1B8] rounded-bl-[12px] pointer-events-none" />
+            <div className="absolute bottom-3 right-3 w-7 h-7 border-b-[3px] border-r-[3px] border-[#B8E1B8] rounded-br-[12px] pointer-events-none" />
+            <div
+              className="absolute left-0 right-0 h-0.5 animate-scan pointer-events-none"
+              style={{
+                background: "linear-gradient(90deg, transparent, #B8E1B8, transparent)",
+                boxShadow: "0 0 12px #B8E1B8",
+              }}
+            />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/40 rounded-full text-[11px] font-bold tracking-wider uppercase text-[#B8E1B8] backdrop-blur-sm">
+              Scanning…
+            </div>
+          </>
         )}
+
+        {/* AR characters — only fruits and vegetables get a dancing
+            character; grains/proteins/dairy still appear in the meal
+            list but don't get an AR overlay. */}
+        {phase === "celebrating" &&
+          detectedFoods
+            .filter((f) => f.category === "vegetable" || f.category === "fruit")
+            .map((food, i) => {
+              const danceDelay = (i % 5) * 0.17;
+              const driftDelay = (i % 4) * 0.6;
+              return (
+              <div
+                key={i}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${food.box.x}%`,
+                  top: `${food.box.y}%`,
+                  width: `${food.box.width}%`,
+                  height: `${food.box.height}%`,
+                }}
+              >
+                {/* Flex-centered character inside the bounding box. */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div
+                    className="animate-float-drift"
+                    style={{ animationDelay: `${driftDelay}s` }}
+                  >
+                    <div
+                      className="relative animate-dance"
+                      style={{ animationDelay: `${danceDelay}s` }}
+                    >
+                      <div
+                        className="text-[80px] leading-none select-none"
+                        style={{
+                          filter:
+                            "drop-shadow(0 6px 10px rgba(0,0,0,0.55)) drop-shadow(0 0 4px rgba(255,255,255,0.7))",
+                        }}
+                        aria-hidden
+                      >
+                        {food.emoji}
+                      </div>
+                      {/* Eyes + smile overlay with shine highlights. */}
+                      <svg
+                        viewBox="0 0 100 100"
+                        className="absolute inset-0 w-full h-full pointer-events-none"
+                        aria-hidden
+                      >
+                        <g transform="translate(50, 38)">
+                          <circle cx="-12" cy="0" r="8" fill="#FAF7F0" stroke="#1A1A1A" strokeWidth="2" />
+                          <circle cx="12" cy="0" r="8" fill="#FAF7F0" stroke="#1A1A1A" strokeWidth="2" />
+                          <circle cx="-11" cy="2" r="3.4" fill="#1A1A1A" />
+                          <circle cx="13" cy="2" r="3.4" fill="#1A1A1A" />
+                          <circle cx="-9.5" cy="-1.5" r="1.4" fill="#FFFFFF" />
+                          <circle cx="14.5" cy="-1.5" r="1.4" fill="#FFFFFF" />
+                          <path
+                            d="M -10 17 Q 0 24 10 17"
+                            fill="none"
+                            stroke="#1A1A1A"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                          />
+                        </g>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                {/* Name label tucked under the bounding box. */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 text-[10px] font-bold text-cream-soft px-2 py-0.5 rounded-full bg-black/65 whitespace-nowrap"
+                  style={{ top: "100%", marginTop: "4px" }}
+                >
+                  {food.name}
+                </div>
+              </div>
+            );
+          })}
       </div>
 
-      {/* Status */}
-      <div className="text-center px-5 pt-4 pb-3 text-[13px] text-white/70 min-h-[44px]">
-        {error ? (
-          <span className="text-[#F0C4A8] font-semibold">{error}</span>
-        ) : phase === "scanning" || phase === "revealed" ? (
-          <strong className="text-cream-soft font-semibold">{statusText}</strong>
-        ) : (
-          statusText
+      {/* Bottom panel: status / progress / shutter / continue */}
+      <div className="flex flex-col gap-3 px-5 pt-4 pb-9">
+        {phase === "idle" && (
+          <>
+            <div className="text-center text-[13px] min-h-[20px]">
+              {error ? (
+                <span className="text-[#F0C4A8] font-semibold">{error}</span>
+              ) : (
+                <span className="text-white/70">
+                  {mode === "before"
+                    ? "Tap the shutter to pick a meal photo — we'll detect food and portions."
+                    : "Tap the shutter to snap how much was eaten."}
+                </span>
+              )}
+            </div>
+            <div className="flex justify-center items-center gap-9 pt-2">
+              <button
+                type="button"
+                aria-label="Photo library"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="M21 15l-5-5L5 21" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={handleShutterClick}
+                aria-label="Take photo"
+                className="w-[72px] h-[72px] rounded-full bg-cream-soft border-4 border-white/20 cursor-pointer hover:scale-95 active:scale-90 transition-transform"
+                style={{ boxShadow: "0 0 0 6px rgba(255,255,255,0.05)" }}
+              />
+              <button
+                type="button"
+                aria-label="Reset preview"
+                onClick={resetPreview}
+                disabled={!pickedFile}
+                className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center disabled:opacity-30"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                </svg>
+              </button>
+            </div>
+          </>
         )}
-      </div>
 
-      {/* Shutter */}
-      <div className="flex justify-center items-center gap-9 px-5 pt-3 pb-9">
-        <button
-          type="button"
-          aria-label="Photo library"
-          onClick={() => fileInputRef.current?.click()}
-          className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center disabled:opacity-50"
-          disabled={phase !== "idle"}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="9" cy="9" r="2" />
-            <path d="M21 15l-5-5L5 21" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={handleShutterClick}
-          aria-label="Take photo"
-          disabled={phase !== "idle"}
-          className="w-[72px] h-[72px] rounded-full bg-cream-soft border-4 border-white/20 cursor-pointer hover:scale-95 active:scale-90 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ boxShadow: "0 0 0 6px rgba(255,255,255,0.05)" }}
-        />
-        <button
-          type="button"
-          aria-label="Reset preview"
-          onClick={() => {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            setPickedFile(null);
-            setPreviewUrl(null);
-          }}
-          disabled={phase !== "idle" || !pickedFile}
-          className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center disabled:opacity-30"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10" />
-            <polyline points="1 20 1 14 7 14" />
-            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-          </svg>
-        </button>
+        {phase === "scanning" && (
+          <div className="px-1">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#B8E1B8] mb-1.5 flex items-center gap-1.5">
+              <span aria-hidden>⚡</span> Meal Power-Up
+            </div>
+            <div className="h-3 bg-white/10 rounded-full overflow-hidden border border-white/10">
+              <div
+                className="h-full bg-gradient-to-r from-[#B8E1B8] to-[#E5B96A] rounded-full transition-[width] duration-150 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  boxShadow: "0 0 10px rgba(184,225,184,0.6)",
+                }}
+              />
+            </div>
+            <div className="text-center text-[12px] text-white/60 pt-3">
+              Identifying foods…
+            </div>
+          </div>
+        )}
+
+        {phase === "celebrating" && (
+          <div className="flex flex-col gap-2 animate-fade-in">
+            <div className="text-center font-serif text-[20px] text-cream-soft font-medium">
+              {detectedFoods.length > 0
+                ? `Found ${detectedFoods.length} ${detectedFoods.length === 1 ? "food" : "foods"}!`
+                : "Snap saved!"}
+              <span className="ml-1" aria-hidden>✨</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full bg-[#B8E1B8] hover:bg-cream-soft text-ink rounded-[20px] py-4 px-6 text-[15px] font-semibold transition-colors active:scale-[0.97]"
+            >
+              Continue →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
