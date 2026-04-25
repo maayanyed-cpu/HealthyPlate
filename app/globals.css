@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cream: #F5F1E8;
+  --cream-soft: #FAF7F0;
+  --surface: #FFFFFF;
+  --sage-deep: #4A6B5F;
+  --sage: #5A8073;
+  --sage-soft: #A8BFA8;
+  --sage-pale: #DCE8DD;
+  --moss: #97BC62;
+  --carrot: #D88463;
+  --carrot-soft: #F0C4A8;
+  --tomato: #C95C4D;
+  --gold: #E5B96A;
+  --berry: #8B5A6B;
+  --ink: #2D3A36;
+  --ink-soft: #6B7670;
+  --ink-mute: #A0A8A4;
+  --border: #E8E5DD;
+  --border-soft: #F0EDE5;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background: linear-gradient(135deg, #EFEAD8 0%, #E8E5D4 100%);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* App phone-frame container */
+.app-frame {
+  width: 100%;
+  max-width: 420px;
+  background: var(--cream-soft);
+  border-radius: 36px;
+  box-shadow: 0 16px 48px rgba(45, 58, 54, 0.12);
+  overflow: hidden;
+  position: relative;
+  min-height: 820px;
+  display: flex;
+  flex-direction: column;
+  margin: 32px auto;
+}
+
+@media (max-width: 480px) {
+  .app-frame {
+    min-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 100%;
+  }
+  html, body {
+    background: var(--cream-soft);
+  }
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 24px;
+}
+.screen::-webkit-scrollbar { width: 6px; }
+.screen::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Hide-scrollbar utility for horizontal strips */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
