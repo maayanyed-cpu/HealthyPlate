@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { FOODS } from "./mockData";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -20,4 +21,22 @@ export async function ensureDefaultUser() {
     create: { id: DEFAULT_USER_ID },
     update: {},
   });
+}
+
+let foodsSeeded = false;
+
+/* Idempotent — upserts the canonical Food list (currently 10 items
+   from mockData.FOODS) on first call per server boot. */
+export async function ensureFoodsSeeded() {
+  if (foodsSeeded) return;
+  await Promise.all(
+    FOODS.map((f) =>
+      db.food.upsert({
+        where: { id: f.id },
+        create: { id: f.id, name: f.name, emoji: f.emoji, category: f.category },
+        update: { name: f.name, emoji: f.emoji, category: f.category },
+      }),
+    ),
+  );
+  foodsSeeded = true;
 }

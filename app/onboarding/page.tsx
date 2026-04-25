@@ -34,7 +34,7 @@ export default function OnboardingPage() {
     startTransition(async () => {
       try {
         await createChild({ name: name.trim(), age, gender });
-        router.push("/home");
+        router.push("/onboarding/diet");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong");
       }

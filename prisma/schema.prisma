@@ -17,16 +17,48 @@ model User {
 }
 
 model Child {
-  id        String   @id @default(cuid())
-  name      String
-  age       Int
-  gender    String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  meals     Meal[]
+  id           String   @id @default(cuid())
+  name         String
+  age          Int
+  gender       String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  // Onboarding step 2 — diet & allergies
+  allergies    String[] @default([])
+  intolerances String[] @default([])
+  dietStyle    String?  // "no-restrictions" | "vegetarian" | "vegan" | "pescatarian" | "halal" | "kosher"
+  notes        String?
+
+  // Onboarding step 3 — eating habits
+  habits       String[] @default([])
+
+  meals        Meal[]
+  ratings      TasteRating[]
 
   @@index([userId, createdAt])
+}
+
+model Food {
+  id       String        @id  // matches lib/mockData FOODS ids ("carrot", "broccoli", …)
+  name     String
+  emoji    String
+  category String        // "vegetable" | "fruit" | "protein"
+  ratings  TasteRating[]
+}
+
+model TasteRating {
+  id      String   @id @default(cuid())
+  childId String
+  child   Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  foodId  String
+  food    Food     @relation(fields: [foodId], references: [id])
+  rating  String   // "love" | "ok" | "maybe" | "not-really" | "hard-no" | "not-sure"
+  ratedAt DateTime @default(now())
+
+  @@unique([childId, foodId])
+  @@index([childId])
 }
 
 model Meal {
