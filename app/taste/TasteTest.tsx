@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { saveTasteRatings } from "./actions";
+import { STARTER_PLAN_THRESHOLD } from "@/lib/mockData";
 
 type Food = { id: string; name: string; emoji: string; category: string };
 
@@ -44,7 +45,25 @@ const CATEGORY_LABEL: Record<string, string> = {
   vegetable: "Vegetables",
   fruit: "Fruits",
   protein: "Proteins",
+  grain: "Grains",
+  dairy: "Dairy",
+  snack: "Snacks",
+  spice: "Spices",
+  drink: "Drinks",
 };
+
+/* Custom display order so the categories appear in the same sequence the
+   prototype uses, regardless of the order Postgres returns them in. */
+const CATEGORY_ORDER: string[] = [
+  "vegetable",
+  "fruit",
+  "protein",
+  "grain",
+  "dairy",
+  "snack",
+  "spice",
+  "drink",
+];
 
 export default function TasteTest({ childName, foods, initialRatings }: Props) {
   const router = useRouter();
@@ -56,11 +75,17 @@ export default function TasteTest({ childName, foods, initialRatings }: Props) {
   const categories = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const f of foods) counts[f.category] = (counts[f.category] ?? 0) + 1;
-    return Object.entries(counts).map(([id, count]) => ({
-      id,
-      label: CATEGORY_LABEL[id] ?? id,
-      count,
-    }));
+    return Object.entries(counts)
+      .map(([id, count]) => ({
+        id,
+        label: CATEGORY_LABEL[id] ?? id,
+        count,
+      }))
+      .sort((a, b) => {
+        const ai = CATEGORY_ORDER.indexOf(a.id);
+        const bi = CATEGORY_ORDER.indexOf(b.id);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
   }, [foods]);
 
   const visibleFoods =
@@ -68,8 +93,14 @@ export default function TasteTest({ childName, foods, initialRatings }: Props) {
 
   const ratedCount = Object.keys(ratings).length;
   const total = foods.length;
-  const progressPct = total === 0 ? 0 : (ratedCount / total) * 100;
-  const milestoneHit = ratedCount >= Math.min(6, total);
+  const targetThreshold = Math.min(STARTER_PLAN_THRESHOLD, total);
+  /* Progress bar fills toward the unlock threshold, not toward the full
+     catalog — otherwise rating 30 of 300 would only show ~10% which
+     feels punishing for what's actually a milestone moment. */
+  const progressPct =
+    targetThreshold === 0 ? 0 : Math.min(100, (ratedCount / targetThreshold) * 100);
+  const milestoneHit = ratedCount >= targetThreshold;
+  const remainingToUnlock = Math.max(0, targetThreshold - ratedCount);
 
   function setRating(foodId: string, rating: string) {
     setRatings((prev) => ({ ...prev, [foodId]: rating }));
@@ -135,7 +166,9 @@ export default function TasteTest({ childName, foods, initialRatings }: Props) {
           <div className="text-[11px] text-ink-soft mt-2 text-center">
             Tap how {childName} feels about each food.{" "}
             <strong className="text-sage-deep font-semibold">
-              {milestoneHit ? "Starter plan unlocked ✓" : "Keep going to unlock the starter plan ✨"}
+              {milestoneHit
+                ? "Starter plan unlocked ✓"
+                : `+${remainingToUnlock} unlocks ${childName}'s starter plan ✨`}
             </strong>
           </div>
         </div>
