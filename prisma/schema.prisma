@@ -34,6 +34,11 @@ model Child {
   // Onboarding step 3 — eating habits
   habits       String[] @default([])
 
+  // Onboarding step 3 — open-ended food preferences (free text)
+  foodLikes    String?
+  foodDislikes String?
+  foodMaybes   String?
+
   meals        Meal[]
   ratings      TasteRating[]
 

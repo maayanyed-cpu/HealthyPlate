@@ -8,9 +8,23 @@ export default async function HabitsPage() {
   const child = await db.child.findFirst({
     where: { userId: DEFAULT_USER_ID },
     orderBy: { createdAt: "desc" },
-    select: { habits: true },
+    select: {
+      habits: true,
+      foodLikes: true,
+      foodDislikes: true,
+      foodMaybes: true,
+    },
   });
   if (!child) redirect("/onboarding");
 
-  return <HabitsForm initial={child.habits} />;
+  return (
+    <HabitsForm
+      initial={child.habits}
+      initialPrefs={{
+        foodLikes: child.foodLikes ?? "",
+        foodDislikes: child.foodDislikes ?? "",
+        foodMaybes: child.foodMaybes ?? "",
+      }}
+    />
+  );
 }

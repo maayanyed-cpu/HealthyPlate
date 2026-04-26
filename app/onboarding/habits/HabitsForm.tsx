@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { updateChildHabits } from "./actions";
+import { updateChildHabits, type FoodPreferences } from "./actions";
 
 const HABITS = [
   {
@@ -32,9 +32,18 @@ const HABITS = [
   },
 ];
 
-export default function HabitsForm({ initial }: { initial: string[] }) {
+export default function HabitsForm({
+  initial,
+  initialPrefs,
+}: {
+  initial: string[];
+  initialPrefs: FoodPreferences;
+}) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(initial);
+  const [foodLikes, setFoodLikes] = useState(initialPrefs.foodLikes);
+  const [foodDislikes, setFoodDislikes] = useState(initialPrefs.foodDislikes);
+  const [foodMaybes, setFoodMaybes] = useState(initialPrefs.foodMaybes);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -48,7 +57,11 @@ export default function HabitsForm({ initial }: { initial: string[] }) {
     setError(null);
     startTransition(async () => {
       try {
-        await updateChildHabits(selected);
+        await updateChildHabits(selected, {
+          foodLikes,
+          foodDislikes,
+          foodMaybes,
+        });
         router.push("/onboarding/confirm");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong");
@@ -112,6 +125,41 @@ export default function HabitsForm({ initial }: { initial: string[] }) {
           })}
         </div>
 
+        {/* Free-text food preferences — gives the taste graph a head start
+            before the 300-food taste test, in the parent's own words. */}
+        <div className="mt-7 flex flex-col gap-5">
+          <div className="text-center">
+            <h3 className="font-serif text-[18px] font-medium text-ink mb-1">
+              Tell us about their <em className="text-sage-deep">food world</em>
+            </h3>
+            <p className="text-[12px] text-ink-soft leading-[1.5]">
+              A few sentences each — totally optional, helps us skip the obvious.
+            </p>
+          </div>
+
+          <PrefField
+            label="Main things they LIKE to eat"
+            placeholder="e.g. pasta with butter, cucumbers, scrambled eggs, blueberries…"
+            emoji="❤️"
+            value={foodLikes}
+            onChange={setFoodLikes}
+          />
+          <PrefField
+            label="What they really DON'T like"
+            placeholder="e.g. anything green, mushrooms, fish, sauces touching other food…"
+            emoji="🚫"
+            value={foodDislikes}
+            onChange={setFoodDislikes}
+          />
+          <PrefField
+            label="The MAYBES — might eat with the right mood"
+            placeholder="e.g. carrots if dipped, salmon if it's mild, soup if blended smooth…"
+            emoji="🤔"
+            value={foodMaybes}
+            onChange={setFoodMaybes}
+          />
+        </div>
+
         <div className="mt-auto pt-5 flex flex-col gap-1">
           {error && (
             <div className="text-[12px] text-tomato bg-[#F8E2DE] border border-tomato/20 rounded-sm px-3 py-2 mb-1">
@@ -134,6 +182,36 @@ export default function HabitsForm({ initial }: { initial: string[] }) {
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PrefField({
+  label,
+  placeholder,
+  emoji,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  emoji: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="flex items-center gap-2 text-[13px] font-semibold text-ink mb-1.5">
+        <span aria-hidden>{emoji}</span>
+        {label}
+      </label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        className="w-full px-4 py-3 bg-surface border-[1.5px] border-line rounded-sm text-[14px] text-ink outline-none focus:border-sage transition-colors resize-y leading-[1.5]"
+      />
     </div>
   );
 }
