@@ -17,6 +17,52 @@ type DetectedFood = {
   box: { x: number; y: number; width: number; height: number };
 };
 
+/* Resize + JPEG-encode the image client-side so it stays well under
+   Anthropic's 5MB-after-base64 vision limit. Phone photos are routinely
+   4-12 MB raw which would exceed the limit; downscaling to 1600px on
+   the long edge with q=0.82 typically lands under 1 MB while preserving
+   plenty of detail for food recognition. */
+async function compressForVision(file: File): Promise<File> {
+  const MAX_EDGE = 1600;
+  const QUALITY = 0.82;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not read image"));
+      el.src = objectUrl;
+    });
+
+    let { width, height } = img;
+    if (width <= MAX_EDGE && height <= MAX_EDGE && file.size < 2 * 1024 * 1024) {
+      /* Small enough already — skip the canvas round-trip. */
+      return file;
+    }
+    const scale = Math.min(MAX_EDGE / width, MAX_EDGE / height, 1);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", QUALITY);
+    });
+    if (!blob) throw new Error("Failed to encode image");
+
+    const renamed = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], renamed, { type: "image/jpeg" });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function SnapPage() {
   return (
     <Suspense fallback={<div className="screen" style={{ background: "#1A201E" }} />}>
@@ -123,8 +169,17 @@ function SnapInner() {
           throw new Error("Missing mealId for after-shot. Start a new before-shot.");
         }
 
+        const compressed = await compressForVision(fileForUpload);
+        console.log(
+          "[snap] compressed:",
+          fileForUpload.size,
+          "→",
+          compressed.size,
+          "bytes",
+        );
+
         const formData = new FormData();
-        formData.append("file", fileForUpload);
+        formData.append("file", compressed);
         formData.append("mode", mode);
         if (mode === "after" && incomingMealId) {
           formData.append("mealId", incomingMealId);
