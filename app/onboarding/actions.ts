@@ -11,7 +11,16 @@ export type CreateChildInput = {
   name: string;
   age: number;
   gender: "girl" | "boy" | "unspecified";
+  heightCm?: number | null;
+  weightKg?: number | null;
 };
+
+function validHeight(v: number | null | undefined): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 30 && v <= 220;
+}
+function validWeight(v: number | null | undefined): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 2 && v <= 200;
+}
 
 export async function createChild(input: CreateChildInput): Promise<{ id: string }> {
   const name = input.name.trim();
@@ -23,6 +32,19 @@ export async function createChild(input: CreateChildInput): Promise<{ id: string
     throw new Error("Invalid gender");
   }
 
+  /* H/W are optional — only persist + stamp lastMeasuredAt when BOTH
+     are provided and within plausible ranges. Skip-later writes nulls. */
+  const hasH = validHeight(input.heightCm);
+  const hasW = validWeight(input.weightKg);
+  const measurementData =
+    hasH && hasW
+      ? {
+          heightCm: input.heightCm as number,
+          weightKg: input.weightKg as number,
+          lastMeasuredAt: new Date(),
+        }
+      : {};
+
   await ensureDefaultUser();
 
   const child = await db.child.create({
@@ -31,6 +53,7 @@ export async function createChild(input: CreateChildInput): Promise<{ id: string
       age: input.age,
       gender: input.gender,
       userId: DEFAULT_USER_ID,
+      ...measurementData,
     },
     select: { id: true },
   });

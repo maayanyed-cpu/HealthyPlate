@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Child"
+  ADD COLUMN "heightCm" DOUBLE PRECISION,
+  ADD COLUMN "weightKg" DOUBLE PRECISION,
+  ADD COLUMN "lastMeasuredAt" TIMESTAMP(3);

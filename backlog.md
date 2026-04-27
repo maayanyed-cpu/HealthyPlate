@@ -46,7 +46,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Step 1 (name/age/gender) | ✅ Built | 🟡 Partial — missing optional `height/weight` block + "Skip — add later" mechanism | ✅ Done — `createChild` writes to `Child` | Add H/W fields + skip-later flow; extend `Child` schema with `heightCm`, `weightKg` (nullable) + `lastMeasuredAt` |
+| Step 1 (name/age/gender + optional H/W) | ✅ Built | ✅ Done — name + age grid + gender pills + two-column Height/Weight inputs + "Skip — add later" toggle that reveals a sage-pale "No problem — we'll remind you next month" pill with Undo | ✅ Done — `createChild` writes name/age/gender always; H/W + `lastMeasuredAt` only persisted when both are provided and within plausible ranges (30-220 cm, 2-200 kg) | None |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
@@ -74,7 +74,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| "Time to measure Maya" CTA banner | ❌ Missing | — | — | Banner not rendered; gated on `lastMeasuredAt` field that doesn't exist yet |
+| "Time to measure" CTA banner + `/measure` page | ✅ Built | ✅ Done — sage gradient banner with 📏 icon, gold pulse dot, "{N} days ago" copy; routes to `/measure` page (matching project tokens) where parent updates H/W and `lastMeasuredAt` | ✅ Done — banner gated on `Child.lastMeasuredAt` null OR > 30 days ago; `updateMeasurements` action writes new H/W + stamps `lastMeasuredAt` | None |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
@@ -150,10 +150,11 @@ The snap loop is real end-to-end, the 300-food taste catalog is in, and onboardi
 ### 2. ~~Fix private-blob photo display~~ ✅ **Done** (commit `6914473`+)
 - Authenticated proxy at `/api/snap-photo/[id]?phase=before|after` fetches the blob server-side with the R/W token and streams the bytes back to the browser. Confirm and Meal Analysis pages now load private-store photos via this proxy. Browser caches each photo for 5 minutes.
 
-### 3. Onboarding step 1 — H/W + skip-later flow
-- Schema: `heightCm`, `weightKg`, `lastMeasuredAt` on `Child` (nullable, with migration).
-- Restore the prototype's skip-later UI.
-- Surface "Time to measure" CTA on Home (gated on `lastMeasuredAt` > 30 days ago).
+### 3. ~~Onboarding step 1 — H/W + skip-later flow~~ ✅ **Done** (commit `7db9641`+)
+- Schema: `heightCm` / `weightKg` / `lastMeasuredAt` (nullable) added via migration `20260427120000_add_child_measurements`.
+- Onboarding step 1 has the prototype's two-column H/W block + "Skip — add later" toggle with the sage-pale confirmation pill.
+- "Time to measure" sage-gradient banner on Home gated on `lastMeasuredAt > 30 days ago` OR null.
+- `/measure` page lets parents update H/W anytime; saves stamp `lastMeasuredAt`, clears the Home banner until the next 30-day window.
 
 ### 4. Smarter free-text matching for onboarding step 3
 - Current matcher misses synonyms ("berries" → strawberry/blueberry/raspberry) and group phrases ("anything green" → all green vegetables, "no fish" → all seafood).

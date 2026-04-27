@@ -39,6 +39,12 @@ model Child {
   foodDislikes String?
   foodMaybes   String?
 
+  // Optional measurements — drives the "Time to measure" Home CTA
+  // and the future growth chart in Insights.
+  heightCm        Float?
+  weightKg        Float?
+  lastMeasuredAt  DateTime?
+
   meals        Meal[]
   ratings      TasteRating[]
 

@@ -27,9 +27,10 @@ export default async function HomePage() {
   let mealsTotal = 0;
   let pendingMeal: { id: string; mealType: string } | null = null;
   let ratedCount = 0;
+  let lastMeasuredAt: Date | null = null;
 
   if (child.id) {
-    const [a, b, c, ratings] = await Promise.all([
+    const [a, b, c, ratings, fullChild] = await Promise.all([
       db.meal.count({
         where: { childId: child.id, loggedAt: { gte: startOfToday() } },
       }),
@@ -40,11 +41,16 @@ export default async function HomePage() {
         select: { id: true, mealType: true },
       }),
       db.tasteRating.count({ where: { childId: child.id } }),
+      db.child.findUnique({
+        where: { id: child.id },
+        select: { lastMeasuredAt: true },
+      }),
     ]);
     mealsToday = a;
     mealsTotal = b;
     pendingMeal = c;
     ratedCount = ratings;
+    lastMeasuredAt = fullChild?.lastMeasuredAt ?? null;
   }
 
   const pronoun = child.gender === "boy" ? "he" : "she";
@@ -53,6 +59,16 @@ export default async function HomePage() {
      threshold. Hidden until at least one food has been rated so a fresh
      account doesn't get a 0% guilt trip on day one. */
   const showTasteRing = child.id !== null && ratedCount > 0;
+
+  /* "Time to measure" banner: never measured, or last measured > 30 days ago. */
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const daysSinceMeasured = lastMeasuredAt
+    ? Math.floor((Date.now() - lastMeasuredAt.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const showMeasureBanner =
+    child.id !== null &&
+    (lastMeasuredAt === null ||
+      Date.now() - lastMeasuredAt.getTime() > THIRTY_DAYS_MS);
   const tasteUnlocked = ratedCount >= STARTER_PLAN_THRESHOLD;
   const tastePct = Math.min(
     100,
@@ -77,6 +93,45 @@ export default async function HomePage() {
           kids={kids}
         />
       </div>
+
+      {/* "Time to measure" banner — sage gradient, gold pulse dot. Shown when
+          the child has never been measured or was measured > 30 days ago. */}
+      {showMeasureBanner && (
+        <Link
+          href="/measure"
+          className="mx-5 mb-3.5 px-4 py-3.5 rounded-[20px] flex items-center gap-3 text-cream-soft shadow-[0_6px_16px_rgba(74,107,95,0.22)] relative overflow-hidden"
+          style={{ background: "linear-gradient(120deg, #4A6B5F, #5A8073)" }}
+        >
+          <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-gold animate-sparkle" aria-hidden />
+          <span className="absolute -top-10 -right-8 w-[120px] h-[120px] rounded-full bg-white/[0.06]" aria-hidden />
+          <span className="w-[38px] h-[38px] bg-white/20 rounded-xl flex items-center justify-center text-[20px] flex-shrink-0 relative z-10">
+            📏
+          </span>
+          <span className="flex-1 relative z-10">
+            <span className="block text-[13px] font-bold">
+              Time to measure {child.name}
+            </span>
+            <span className="block text-[11px] opacity-85 mt-0.5 leading-[1.3]">
+              {daysSinceMeasured === null
+                ? "Add height & weight — 1 minute, big difference for the plan"
+                : `Last update was ${daysSinceMeasured} days ago — 1 minute, big difference for ${child.gender === "boy" ? "his" : "her"} plan`}
+            </span>
+          </span>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="opacity-85 relative z-10 flex-shrink-0"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+      )}
 
       {/* Pending after-shot — only shown when there's actually a meal in progress */}
       {pendingMeal && (

@@ -19,6 +19,9 @@ export default function OnboardingPage() {
   const [age, setAge] = useState<number>(DEFAULT_CHILD.age);
   const [gender, setGender] =
     useState<"girl" | "boy" | "unspecified">(DEFAULT_CHILD.gender);
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [skipHw, setSkipHw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -31,9 +34,21 @@ export default function OnboardingPage() {
   function handleContinue() {
     if (!canContinue) return;
     setError(null);
+    /* If skipped or fields empty, send nulls so the action skips H/W
+       persistence entirely. Both must be provided to count as "measured". */
+    const hNum = heightCm.trim() ? parseFloat(heightCm) : NaN;
+    const wNum = weightKg.trim() ? parseFloat(weightKg) : NaN;
+    const hasMeasurements =
+      !skipHw && Number.isFinite(hNum) && Number.isFinite(wNum);
     startTransition(async () => {
       try {
-        await createChild({ name: name.trim(), age, gender });
+        await createChild({
+          name: name.trim(),
+          age,
+          gender,
+          heightCm: hasMeasurements ? hNum : null,
+          weightKg: hasMeasurements ? wNum : null,
+        });
         router.push("/onboarding/diet");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong");
@@ -126,7 +141,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Gender */}
-        <div className="mb-2">
+        <div className="mb-5">
           <label className="block text-[13px] font-semibold text-ink mb-2">
             Gender{" "}
             <span className="text-ink-mute font-medium text-[12px]">
@@ -151,6 +166,72 @@ export default function OnboardingPage() {
             ))}
           </div>
         </div>
+
+        {/* Height + Weight — optional. Skip-later toggle hides the inputs
+            and reveals a sage-pale "we'll remind you next month" pill. */}
+        <div className={"mb-2 transition-opacity " + (skipHw ? "opacity-50" : "")}>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="block text-[13px] font-semibold text-ink mb-2">
+                Height <span className="text-ink-mute font-medium text-[12px]">(cm)</span>
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder="e.g. 102"
+                value={heightCm}
+                onChange={(e) => setHeightCm(e.target.value)}
+                disabled={skipHw}
+                className="w-full px-4 py-[14px] bg-surface border-[1.5px] border-line rounded-sm text-[15px] text-ink outline-none focus:border-sage transition-colors disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] font-semibold text-ink mb-2">
+                Weight <span className="text-ink-mute font-medium text-[12px]">(kg)</span>
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder="e.g. 16.4"
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                disabled={skipHw}
+                className="w-full px-4 py-[14px] bg-surface border-[1.5px] border-line rounded-sm text-[15px] text-ink outline-none focus:border-sage transition-colors disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2.5 mb-5 mt-1.5">
+          <p className="text-[11px] text-ink-mute leading-[1.5] flex-1">
+            Optional — we plot growth on WHO percentile curves. Add now or
+            anytime from {name.trim() || "your child"}&apos;s profile.
+          </p>
+          <button
+            type="button"
+            onClick={() => setSkipHw((v) => !v)}
+            className={
+              "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold border whitespace-nowrap transition-all " +
+              (skipHw
+                ? "bg-sage-pale text-sage-deep border-sage-pale"
+                : "bg-cream text-ink-soft border-line hover:border-sage-soft")
+            }
+          >
+            {skipHw ? "Undo" : "Skip — add later"}
+          </button>
+        </div>
+
+        {skipHw && (
+          <div className="flex items-center gap-2 mb-5 px-3 py-2.5 bg-sage-pale rounded-sm text-[12px] text-sage-deep animate-fade-in">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <strong className="font-serif font-semibold">No problem.</strong>
+            <span>We&apos;ll remind you next month — or add anytime in Insights.</span>
+          </div>
+        )}
 
         <div className="mt-auto pt-5 flex flex-col gap-1">
           {error && (
