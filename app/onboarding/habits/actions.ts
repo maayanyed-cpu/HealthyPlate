@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db, DEFAULT_USER_ID } from "@/lib/db";
+import { db, DEFAULT_USER_ID, ensureFoodsSeeded } from "@/lib/db";
+import { FOODS } from "@/lib/mockData";
+import { matchFoodPrefs } from "@/lib/matchFoodPrefs";
 
 export type FoodPreferences = {
   foodLikes: string;
@@ -36,6 +38,27 @@ export async function updateChildHabits(
       foodMaybes: trimmed(prefs?.foodMaybes),
     },
   });
+
+  /* Auto-derive taste ratings from the free-text fields.
+     - LIKES → "love" rating
+     - DISLIKES → "hard-no" rating
+     - MAYBES → "maybe" rating
+     skipDuplicates relies on the @@unique([childId, foodId]) constraint
+     to preserve any rating the parent has already set (manually or via
+     a prior habits submission). */
+  if (prefs) {
+    const matches = matchFoodPrefs(prefs, FOODS);
+    const total = matches.likes.length + matches.dislikes.length + matches.maybes.length;
+    if (total > 0) {
+      await ensureFoodsSeeded();
+      const data = [
+        ...matches.likes.map((foodId) => ({ childId: child.id, foodId, rating: "love" })),
+        ...matches.dislikes.map((foodId) => ({ childId: child.id, foodId, rating: "hard-no" })),
+        ...matches.maybes.map((foodId) => ({ childId: child.id, foodId, rating: "maybe" })),
+      ];
+      await db.tasteRating.createMany({ data, skipDuplicates: true });
+    }
+  }
 
   revalidatePath("/home");
 }
