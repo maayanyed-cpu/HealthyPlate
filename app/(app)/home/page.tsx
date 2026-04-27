@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TODAYS_PLAN } from "@/lib/mockData";
+import { TODAYS_PLAN, STARTER_PLAN_THRESHOLD } from "@/lib/mockData";
 import { getCurrentChild, listChildren } from "@/lib/getCurrentChild";
 import { db } from "@/lib/db";
 import ChildSwitcher from "./ChildSwitcher";
@@ -26,9 +26,10 @@ export default async function HomePage() {
   let mealsToday = 0;
   let mealsTotal = 0;
   let pendingMeal: { id: string; mealType: string } | null = null;
+  let ratedCount = 0;
 
   if (child.id) {
-    [mealsToday, mealsTotal, pendingMeal] = await Promise.all([
+    const [a, b, c, ratings] = await Promise.all([
       db.meal.count({
         where: { childId: child.id, loggedAt: { gte: startOfToday() } },
       }),
@@ -38,10 +39,25 @@ export default async function HomePage() {
         orderBy: { loggedAt: "desc" },
         select: { id: true, mealType: true },
       }),
+      db.tasteRating.count({ where: { childId: child.id } }),
     ]);
+    mealsToday = a;
+    mealsTotal = b;
+    pendingMeal = c;
+    ratedCount = ratings;
   }
 
   const pronoun = child.gender === "boy" ? "he" : "she";
+
+  /* Profile-completion ring: progress toward the 30-rating starter-plan
+     threshold. Hidden until at least one food has been rated so a fresh
+     account doesn't get a 0% guilt trip on day one. */
+  const showTasteRing = child.id !== null && ratedCount > 0;
+  const tasteUnlocked = ratedCount >= STARTER_PLAN_THRESHOLD;
+  const tastePct = Math.min(
+    100,
+    Math.round((ratedCount / STARTER_PLAN_THRESHOLD) * 100),
+  );
 
   return (
     <div className="screen">
@@ -116,6 +132,44 @@ export default async function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Profile-completion ring — only after the parent has any ratings */}
+      {showTasteRing && (
+        <Link
+          href="/taste"
+          className="mx-5 mb-3.5 px-4 py-3.5 bg-surface border border-line-soft rounded-[20px] flex items-center gap-4 hover:border-sage-soft transition-colors"
+        >
+          <TasteRing pct={tastePct} unlocked={tasteUnlocked} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] tracking-[0.16em] uppercase font-bold text-sage-deep">
+              Taste profile
+            </div>
+            <div className="font-serif text-[15px] font-medium text-ink leading-tight mt-0.5">
+              {tasteUnlocked
+                ? `Starter plan unlocked ✓`
+                : `Keep building ${child.name}'s starter plan`}
+            </div>
+            <div className="text-[12px] text-ink-soft mt-0.5">
+              {tasteUnlocked
+                ? `${ratedCount} foods rated · sharper every tap`
+                : `${ratedCount} of ${STARTER_PLAN_THRESHOLD} foods rated`}
+            </div>
+          </div>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-ink-soft flex-shrink-0"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+      )}
 
       {/* Quick actions */}
       <div className="px-5 grid grid-cols-2 gap-2.5 pb-1">
@@ -208,6 +262,53 @@ export default async function HomePage() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* Small SVG ring used by the profile-completion card. The ring is
+   rotated -90° so the arc starts at 12 o'clock and fills clockwise. */
+function TasteRing({ pct, unlocked }: { pct: number; unlocked: boolean }) {
+  const size = 56;
+  const stroke = 5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference * (1 - pct / 100);
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ transform: "rotate(-90deg)" }}
+        aria-hidden
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={unlocked ? "var(--sage-deep)" : "var(--sage)"}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center font-serif text-[14px] font-semibold text-ink">
+        {unlocked ? "✓" : `${pct}%`}
       </div>
     </div>
   );
