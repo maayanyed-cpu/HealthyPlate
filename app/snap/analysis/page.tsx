@@ -68,8 +68,18 @@ export default async function MealAnalysisPage({
       {/* Before/After comparison */}
       <div className="px-5 mt-3.5 grid grid-cols-2 gap-2.5">
         {[
-          { label: "Before", variant: "before" as const, photoUrl: meal.beforePhotoUrl },
-          { label: "After", variant: "after" as const, photoUrl: meal.afterPhotoUrl },
+          {
+            label: "Before",
+            variant: "before" as const,
+            photoUrl: meal.beforePhotoUrl,
+            phase: "before" as const,
+          },
+          {
+            label: "After",
+            variant: "after" as const,
+            photoUrl: meal.afterPhotoUrl,
+            phase: "after" as const,
+          },
         ].map((p) => (
           <div
             key={p.label}
@@ -85,7 +95,7 @@ export default async function MealAnalysisPage({
             {p.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={p.photoUrl}
+                src={`/api/snap-photo/${meal.id}?phase=${p.phase}`}
                 alt={`${p.label} — ${name}'s ${meal.mealType}`}
                 className="w-full h-full object-cover"
               />

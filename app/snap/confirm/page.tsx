@@ -51,7 +51,7 @@ export default async function ConfirmPage({
         {meal.beforePhotoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={meal.beforePhotoUrl}
+            src={`/api/snap-photo/${meal.id}?phase=before`}
             alt={`${name}'s ${meal.mealType}`}
             className="w-full h-full object-cover"
           />

@@ -90,15 +90,15 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Viewfinder + scanning + AR celebration | ✅ Built | ✅ Done — three-phase flow (idle → scanning → celebrating); scan zone with corner brackets + scan line + Meal Power-Up progress bar; AR characters at vision-supplied bounding boxes, dancing + drifting, only on fruits/veggies; canvas-confetti burst + `HealthyPlate.mp4` audio cue + Continue button. Two file inputs (camera-only + gallery) so iOS picker works correctly. Client-side JPEG resize before upload. | ✅ Done — `Meal.beforePhotoUrl` / `afterPhotoUrl` persist real Blob URLs; `DetectedFood` rows are real Anthropic Opus 4.7 output | Box coordinates not persisted (snap-page-only); private-blob photos don't render on the confirm page (URL not reachable by `<img>`); demo "no-photo" path errors instead of falling back |
+| Viewfinder + scanning + AR celebration | ✅ Built | ✅ Done — three-phase flow (idle → scanning → celebrating); scan zone with corner brackets + scan line + Meal Power-Up progress bar; AR characters at vision-supplied bounding boxes, dancing + drifting, only on fruits/veggies; canvas-confetti burst + `HealthyPlate.mp4` audio cue + Continue button. Two file inputs (camera-only + gallery) so iOS picker works correctly. Client-side JPEG resize before upload. | ✅ Done — `Meal.beforePhotoUrl` / `afterPhotoUrl` persist real Blob URLs; `DetectedFood` rows are real Anthropic Opus 4.7 output | Box coordinates not persisted (snap-page-only); demo "no-photo" path errors instead of falling back |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Confirm (detected foods) | ✅ Built | ✅ Done — 2-column tap-to-sing `VegetableAvatar` grid with SVG eyes/smile, animated wiggle, speech-bubble flip, synthesized 3-note discovery chime on mount | ✅ Done — reads `Meal.detected` (phase=before) by `mealId` | Photo display uses `<img src={blobUrl}>` which won't render for private blobs; needs a server-side proxy/signed-URL route or a switch to public blobs to show the photo |
+| Confirm (detected foods) | ✅ Built | ✅ Done — 2-column tap-to-sing `VegetableAvatar` grid with SVG eyes/smile, animated wiggle, speech-bubble flip, synthesized 3-note discovery chime on mount; before-shot photo loads via authenticated proxy (`/api/snap-photo/{mealId}?phase=before`) | ✅ Done — reads `Meal.detected` (phase=before) by `mealId` | None |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); shows real before/after photos when present (subject to private-blob caveat above); balance/nutrients/recommendation computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated); after-shot `percentEaten` is hardcoded to 50 — no after-vision pass yet |
+| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); both before-shot and after-shot photos load via authenticated proxy (`/api/snap-photo/{mealId}?phase=...`); balance/nutrients/recommendation computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated); after-shot `percentEaten` is hardcoded to 50 — no after-vision pass yet |
 
 ---
 
@@ -147,10 +147,8 @@ The snap loop is real end-to-end, the 300-food taste catalog is in, and onboardi
 - **Insights — Taste graph bars**: aggregate ratings → render the prototype's veggie bars.
 - All the data is already there; this is a render-only sprint.
 
-### 2. Fix private-blob photo display (or switch the store to public)
-- Confirm page and Meal Analysis currently render `<img src={privateBlobUrl}>` which won't load for browser fetches.
-- Cheapest fix: switch the Vercel Blob store to public access (config flip in dashboard) — then `put({access: "public"})` works again, URLs are reachable, no app-code change needed.
-- Robust fix: add an authenticated proxy route (e.g. `/api/snap-photo/[id]`) that streams the blob bytes server-side using the R/W token.
+### 2. ~~Fix private-blob photo display~~ ✅ **Done** (commit `6914473`+)
+- Authenticated proxy at `/api/snap-photo/[id]?phase=before|after` fetches the blob server-side with the R/W token and streams the bytes back to the browser. Confirm and Meal Analysis pages now load private-store photos via this proxy. Browser caches each photo for 5 minutes.
 
 ### 3. Onboarding step 1 — H/W + skip-later flow
 - Schema: `heightCm`, `weightKg`, `lastMeasuredAt` on `Child` (nullable, with migration).
