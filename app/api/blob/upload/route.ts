@@ -1,7 +1,7 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { db, ensureDefaultUser } from "@/lib/db";
-import { detectFoodsFromBytes } from "@/lib/vision";
+import { detectFoodsFromBytes, detectPercentEatenFromBytes } from "@/lib/vision";
 import { getCurrentChildId } from "@/lib/getCurrentChild";
 
 export const runtime = "nodejs";
@@ -132,9 +132,56 @@ export async function POST(request: Request): Promise<NextResponse> {
       { status: 400 },
     );
   }
-  const before = await db.detectedFood.findMany({
-    where: { mealId: incomingMealId, phase: "before" },
-  });
+  const [before, mealRow] = await Promise.all([
+    db.detectedFood.findMany({
+      where: { mealId: incomingMealId, phase: "before" },
+    }),
+    db.meal.findUnique({
+      where: { id: incomingMealId },
+      select: { beforePhotoUrl: true },
+    }),
+  ]);
+
+  /* Run a second vision pass to estimate per-food consumption.
+     If anything goes wrong (no before-photo, network blip, model
+     error), we silently fall back to 50% so the analysis page still
+     works. The map keys on lowercased food name. */
+  const consumptionByName = new Map<string, number>();
+  if (before.length > 0 && mealRow?.beforePhotoUrl) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const afterBytes = Buffer.from(arrayBuffer);
+
+      const token = process.env.BLOB_READ_WRITE_TOKEN;
+      const upstream = await fetch(mealRow.beforePhotoUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: "no-store",
+      });
+      if (!upstream.ok) {
+        throw new Error(`before-photo fetch ${upstream.status}`);
+      }
+      const beforeBytes = Buffer.from(await upstream.arrayBuffer());
+      const beforeContentType =
+        upstream.headers.get("content-type") ?? "image/jpeg";
+
+      const estimates = await detectPercentEatenFromBytes(
+        beforeBytes,
+        afterBytes,
+        beforeContentType,
+        mediaType,
+        before.map((d) => ({ name: d.name })),
+      );
+      for (const e of estimates) {
+        consumptionByName.set(e.name.toLowerCase(), e.percentEaten);
+      }
+    } catch (e) {
+      console.error(
+        "[snap-route] consumption vision failed, falling back to 50%:",
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+
   await db.meal.update({
     where: { id: incomingMealId },
     data: {
@@ -148,7 +195,8 @@ export async function POST(request: Request): Promise<NextResponse> {
           portionGrams: d.portionGrams,
           confidence: d.confidence,
           phase: "after",
-          percentEaten: 50,
+          percentEaten:
+            consumptionByName.get(d.name.toLowerCase()) ?? 50,
         })),
       },
     },

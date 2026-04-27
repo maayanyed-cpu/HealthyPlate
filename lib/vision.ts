@@ -160,3 +160,119 @@ export async function detectFoodsFromBytes(
   );
   return foods;
 }
+
+/* ------------------------------------------------------------------
+   After-shot consumption estimator. Takes BEFORE + AFTER photos plus
+   the list of foods we identified in the before-shot, returns a
+   per-food percent-eaten estimate (0 = untouched, 100 = all gone).
+   ------------------------------------------------------------------ */
+
+export type ConsumptionEstimate = {
+  name: string;
+  percentEaten: number;
+};
+
+const CONSUMPTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["consumption"],
+  properties: {
+    consumption: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "percentEaten"],
+        properties: {
+          name: {
+            type: "string",
+            description:
+              "Name of the food. MUST exactly match one of the names from the input list.",
+          },
+          percentEaten: {
+            type: "number",
+            description:
+              "Percentage of that food that was consumed: 0 means untouched, 100 means completely gone, 50 means roughly half eaten. Whole numbers preferred.",
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+const CONSUMPTION_PROMPT_HEADER =
+  "Compare the BEFORE and AFTER photos of a child's meal. For each food in the list below, estimate what percentage was eaten — 0 means untouched, 100 means completely gone, 50 means roughly half. Be honest: kids often refuse one food entirely while finishing another. Some foods may not be visible in the after-photo because they were eaten or because the angle changed; if a food is plausibly gone, score it high. Return exactly one estimate per food in the list.";
+
+export async function detectPercentEatenFromBytes(
+  beforeBytes: Buffer,
+  afterBytes: Buffer,
+  beforeMediaType: string,
+  afterMediaType: string,
+  knownFoods: Array<{ name: string }>,
+): Promise<ConsumptionEstimate[]> {
+  if (knownFoods.length === 0) return [];
+
+  const beforeBase64 = beforeBytes.toString("base64");
+  const afterBase64 = afterBytes.toString("base64");
+  const safeBefore = normalizeMediaType(beforeMediaType);
+  const safeAfter = normalizeMediaType(afterMediaType);
+
+  console.log(
+    "[vision/consumption] calling Anthropic, foods:",
+    knownFoods.length,
+    "beforeBytes:",
+    beforeBytes.byteLength,
+    "afterBytes:",
+    afterBytes.byteLength,
+  );
+
+  const foodList = knownFoods.map((f) => `- ${f.name}`).join("\n");
+  const userText =
+    `${CONSUMPTION_PROMPT_HEADER}\n\nFoods on the plate (use these exact names in your response):\n${foodList}`;
+
+  const response = await client.messages.create({
+    model: "claude-opus-4-7",
+    max_tokens: 4096,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "BEFORE photo:" },
+          { type: "image", source: { type: "base64", media_type: safeBefore, data: beforeBase64 } },
+          { type: "text", text: "AFTER photo:" },
+          { type: "image", source: { type: "base64", media_type: safeAfter, data: afterBase64 } },
+          { type: "text", text: userText },
+        ],
+      },
+    ],
+    output_config: {
+      format: { type: "json_schema", schema: CONSUMPTION_SCHEMA },
+    },
+  });
+  console.log(
+    "[vision/consumption] response stop_reason:",
+    response.stop_reason,
+    "blocks:",
+    response.content.map((b) => b.type),
+  );
+
+  const textBlock = response.content.find(
+    (b): b is Anthropic.TextBlock => b.type === "text",
+  );
+  if (!textBlock) {
+    throw new Error("Vision API returned no text block");
+  }
+
+  const parsed = JSON.parse(textBlock.text) as {
+    consumption: ConsumptionEstimate[];
+  };
+  const cleaned = parsed.consumption.map((c) => ({
+    name: c.name,
+    percentEaten: Math.max(0, Math.min(100, Math.round(c.percentEaten))),
+  }));
+  console.log(
+    "[vision/consumption] estimates:",
+    cleaned.map((c) => `${c.name}=${c.percentEaten}%`).join(" "),
+  );
+  return cleaned;
+}

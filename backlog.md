@@ -98,7 +98,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); both before-shot and after-shot photos load via authenticated proxy (`/api/snap-photo/{mealId}?phase=...`); balance/nutrients/recommendation computed via `computeAnalysis()` | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated); after-shot `percentEaten` is hardcoded to 50 — no after-vision pass yet |
+| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); both before-shot and after-shot photos load via authenticated proxy (`/api/snap-photo/{mealId}?phase=...`); balance/nutrients/recommendation computed via `computeAnalysis()`; per-food `percentEaten` from a real second Anthropic vision pass that compares the before + after photos | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated) |
 
 ---
 
@@ -160,9 +160,9 @@ The snap loop is real end-to-end, the 300-food taste catalog is in, and onboardi
 - `matchFoodPrefs` now calls Claude Haiku 4.5 with structured outputs to extract food IDs from each text block — handles synonyms ("berries", "anything green", "no fish") and group phrases.
 - Regex matcher kept as fallback if the Anthropic call fails.
 
-### 5. After-shot real `percentEaten` (a real second vision pass)
-- Currently `saveAfterSnap` copies before-foods with `percentEaten: 50` placeholder.
-- Run a second Anthropic vision call comparing before vs after photos to estimate per-food consumption.
+### 5. ~~After-shot real `percentEaten`~~ ✅ **Done** (commit `7003844`+)
+- `detectPercentEatenFromBytes` in `lib/vision.ts` runs a second Opus 4.7 vision pass comparing the BEFORE + AFTER photos against the known food list, returns `{name, percentEaten}` per food (0-100).
+- After-shot route refetches the before-photo bytes via the R/W token, calls the function, applies the estimates to the new after-phase `DetectedFood` rows. Falls back to 50% if anything fails (no before-photo, network blip, model error).
 
 ### 6. USDA nutrient data
 - Replace `lib/nutrition.ts` illustrative numbers with USDA FoodData Central data for the 300-food catalog.
