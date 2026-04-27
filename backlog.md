@@ -126,7 +126,19 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Growth chart, balance history, peer comparison, veggie collection | ⏳ Stub | ⏳ Coming-soon placeholders rendered as a 2×2 grid below the taste graph | — | Growth chart needs WHO percentile data + `GrowthMeasurement` table; balance history needs analyzed-meal aggregates; peer comparison needs cohort data; veggie collection needs `UnlockedVeggie` per-child table |
+| Balance history (last 7 meals) | ✅ Built | ✅ Done — horizontal bar strip per meal colored by balance score (sage-deep ≥85, sage ≥70, gold ≥50, carrot <50); average % shown alongside | ✅ Done — `db.meal.findMany` with `take: 7, status: "complete"` for the active child; per-meal `computeAnalysis` runs server-side | None |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Nutrient trend (averaged across the same 7-meal window) | ✅ Built | ✅ Done — six horizontal bars (Protein/Iron/Fiber/Vit. A/Vit. D/Calcium) with tone-coded color (sage = good ≥33%, gold = medium ≥15%, carrot-soft = low) | ✅ Done — averages each nutrient pct across the per-meal `computeAnalysis` results | None |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Loves + Hardest-sell category callout | ✅ Built | ✅ Done — two side-by-side cards: pink "Loves" (top-loved category + count) and carrot "Hardest sell" (top hard-no/not-really category + count) | ✅ Done — aggregates `TasteRating` × `Food.category` for the active child | None |
+
+| Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
+|---|---|---|---|---|
+| Growth chart, peer comparison | ⏳ Stub | ⏳ Coming-soon placeholders rendered as a 2-card row below the data cards | — | Growth chart needs WHO percentile data + a `GrowthMeasurement` time-series table (currently only the latest H/W is stored on `Child`); peer comparison needs cohort data we don't yet collect |
 
 ---
 

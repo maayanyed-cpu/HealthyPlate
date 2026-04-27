@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getCurrentChild } from "@/lib/getCurrentChild";
 import { FOODS } from "@/lib/mockData";
+import { computeAnalysis } from "@/lib/nutrition";
 
 export const dynamic = "force-dynamic";
 
@@ -62,19 +63,47 @@ type RatingRow = {
   food: { category: string; name: string; emoji: string };
 };
 
+type MealForAnalysis = {
+  id: string;
+  mealType: string;
+  loggedAt: Date;
+  detected: Array<{ foodKey: string; portionGrams: number; percentEaten: number | null }>;
+};
+
 export default async function InsightsPage() {
   const child = await getCurrentChild();
 
   let ratings: RatingRow[] = [];
+  let recentMeals: MealForAnalysis[] = [];
   if (child.id) {
-    ratings = await db.tasteRating.findMany({
-      where: { childId: child.id },
-      select: {
-        rating: true,
-        food: { select: { category: true, name: true, emoji: true } },
-      },
-      orderBy: { ratedAt: "desc" },
-    });
+    [ratings, recentMeals] = await Promise.all([
+      db.tasteRating.findMany({
+        where: { childId: child.id },
+        select: {
+          rating: true,
+          food: { select: { category: true, name: true, emoji: true } },
+        },
+        orderBy: { ratedAt: "desc" },
+      }),
+      db.meal.findMany({
+        where: { childId: child.id, status: "complete" },
+        orderBy: { loggedAt: "desc" },
+        take: 7,
+        select: {
+          id: true,
+          mealType: true,
+          loggedAt: true,
+          detected: {
+            where: { phase: "after" },
+            select: {
+              foodKey: true,
+              portionGrams: true,
+              percentEaten: true,
+            },
+          },
+        },
+      }),
+    ]);
   }
 
   /* Aggregate counts per category × rating. */
@@ -99,6 +128,78 @@ export default async function InsightsPage() {
 
   const totalRated = ratings.length;
   const titleSubject = child.id ? child.name : "Your child";
+
+  /* Balance history — one analysis per recent meal, oldest → newest so
+     the strip reads left-to-right like a timeline. */
+  const balanceHistory = recentMeals
+    .slice()
+    .reverse()
+    .map((m) => {
+      const analysis = computeAnalysis(
+        m.detected.map((d) => ({
+          foodKey: d.foodKey,
+          portionGrams: d.portionGrams,
+          percentEaten: d.percentEaten ?? 0,
+        })),
+        m.mealType,
+      );
+      return {
+        id: m.id,
+        mealType: m.mealType,
+        loggedAt: m.loggedAt,
+        balanceScore: analysis.balanceScore,
+        nutrients: analysis.nutrients,
+      };
+    });
+
+  const avgBalance =
+    balanceHistory.length > 0
+      ? Math.round(
+          balanceHistory.reduce((s, b) => s + b.balanceScore, 0) /
+            balanceHistory.length,
+        )
+      : 0;
+
+  /* Average per-nutrient pct across the same recent meals. Each
+     `nutrients` array carries [{name, pct, tone}] for the six tracked
+     nutrients in stable NUTRIENT_ORDER. */
+  const NUTRIENT_NAMES = ["Protein", "Iron", "Fiber", "Vit. A", "Vit. D", "Calcium"];
+  const nutrientTrend = NUTRIENT_NAMES.map((label) => {
+    if (balanceHistory.length === 0) return { name: label, pct: 0 };
+    let sum = 0;
+    let count = 0;
+    for (const b of balanceHistory) {
+      const found = b.nutrients.find((n) => n.name === label);
+      if (found) {
+        sum += found.pct;
+        count += 1;
+      }
+    }
+    return {
+      name: label,
+      pct: count === 0 ? 0 : Math.round(sum / count),
+    };
+  });
+
+  /* Loves / avoids — most-loved category and most-refused category
+     by raw count (not proportion, since a category with one love but
+     no other ratings would otherwise win). */
+  const lovesByCat: Record<string, number> = {};
+  const refusalsByCat: Record<string, number> = {};
+  for (const r of ratings) {
+    if (r.rating === "love") {
+      lovesByCat[r.food.category] = (lovesByCat[r.food.category] ?? 0) + 1;
+    } else if (r.rating === "hard-no" || r.rating === "not-really") {
+      refusalsByCat[r.food.category] =
+        (refusalsByCat[r.food.category] ?? 0) + 1;
+    }
+  }
+  const topLoveCat = Object.entries(lovesByCat).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
+  const topRefuseCat = Object.entries(refusalsByCat).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
 
   return (
     <div className="screen">
@@ -238,16 +339,164 @@ export default async function InsightsPage() {
         </div>
       )}
 
-      {/* Coming-soon strip for the other Insights features */}
-      <div className="mx-5 mt-6 text-[11px] uppercase tracking-[0.14em] text-ink-mute font-bold">
-        More insights coming
+      {/* Real insights — driven by recent meals + ratings */}
+      {balanceHistory.length > 0 && (
+        <>
+          <div className="mx-5 mt-6 text-[11px] uppercase tracking-[0.14em] text-ink-mute font-bold">
+            How meals are landing
+          </div>
+          <div className="px-5 mt-2 flex flex-col gap-2.5">
+            {/* Balance history strip */}
+            <div className="bg-surface border border-line-soft rounded-[20px] px-4 py-3.5">
+              <div className="flex items-center justify-between mb-2.5">
+                <div>
+                  <div className="font-serif text-[14px] font-medium text-ink">
+                    Balance history
+                  </div>
+                  <div className="text-[11px] text-ink-mute">
+                    Last {balanceHistory.length}{" "}
+                    {balanceHistory.length === 1 ? "meal" : "meals"} · avg{" "}
+                    {avgBalance}%
+                  </div>
+                </div>
+                <div className="font-serif text-[18px] font-medium text-ink">
+                  {avgBalance}
+                  <span className="text-[12px] text-ink-soft">%</span>
+                </div>
+              </div>
+              <div className="flex items-end gap-1.5 h-12">
+                {balanceHistory.map((b) => {
+                  const heightPct = Math.max(8, b.balanceScore);
+                  const color =
+                    b.balanceScore >= 85
+                      ? "var(--sage-deep)"
+                      : b.balanceScore >= 70
+                      ? "var(--sage)"
+                      : b.balanceScore >= 50
+                      ? "var(--gold)"
+                      : "var(--carrot)";
+                  return (
+                    <div
+                      key={b.id}
+                      className="flex-1 flex flex-col items-center gap-1"
+                      title={`${b.mealType} · ${b.balanceScore}%`}
+                    >
+                      <div className="w-full flex-1 flex items-end">
+                        <div
+                          className="w-full rounded-t-[4px]"
+                          style={{
+                            height: `${heightPct}%`,
+                            background: color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between mt-1.5 text-[9px] text-ink-mute uppercase tracking-[0.06em]">
+                <span>{balanceHistory[0]?.mealType}</span>
+                <span>most recent →</span>
+              </div>
+            </div>
+
+            {/* Nutrient trend (averaged across the same window) */}
+            <div className="bg-surface border border-line-soft rounded-[20px] px-4 py-3.5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="font-serif text-[14px] font-medium text-ink">
+                    Nutrient trend
+                  </div>
+                  <div className="text-[11px] text-ink-mute">
+                    Average % of daily target across the last{" "}
+                    {balanceHistory.length}{" "}
+                    {balanceHistory.length === 1 ? "meal" : "meals"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                {nutrientTrend.map((n) => {
+                  const tone =
+                    n.pct >= 33 ? "good" : n.pct >= 15 ? "med" : "low";
+                  const barColor =
+                    tone === "good"
+                      ? "var(--sage)"
+                      : tone === "med"
+                      ? "var(--gold)"
+                      : "var(--carrot-soft)";
+                  return (
+                    <div
+                      key={n.name}
+                      className="grid grid-cols-[80px_1fr_44px] items-center gap-2.5"
+                    >
+                      <div className="text-[12px] text-ink font-medium">
+                        {n.name}
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden bg-line">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${n.pct}%`, background: barColor }}
+                        />
+                      </div>
+                      <div className="text-[11px] text-ink-soft font-semibold text-right">
+                        {n.pct}%
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Loves + avoids by category */}
+      {(topLoveCat || topRefuseCat) && (
+        <>
+          <div className="mx-5 mt-5 text-[11px] uppercase tracking-[0.14em] text-ink-mute font-bold">
+            What they reach for
+          </div>
+          <div className="mx-5 mt-2 grid grid-cols-2 gap-2.5">
+            {topLoveCat && (
+              <div className="px-3 py-3.5 rounded-[20px] bg-[#F8E2DE]">
+                <div className="text-[10px] tracking-[0.14em] uppercase text-[#C95C4D] font-bold">
+                  Loves
+                </div>
+                <div className="font-serif text-[16px] font-medium text-ink mt-1">
+                  {CATEGORY_LABEL[topLoveCat[0]] ?? topLoveCat[0]}
+                </div>
+                <div className="text-[11px] text-ink-soft mt-0.5">
+                  {topLoveCat[1]}{" "}
+                  {topLoveCat[1] === 1 ? "favorite" : "favorites"}
+                </div>
+              </div>
+            )}
+            {topRefuseCat && (
+              <div className="px-3 py-3.5 rounded-[20px] bg-[#F0DFD2]">
+                <div className="text-[10px] tracking-[0.14em] uppercase text-carrot font-bold">
+                  Hardest sell
+                </div>
+                <div className="font-serif text-[16px] font-medium text-ink mt-1">
+                  {CATEGORY_LABEL[topRefuseCat[0]] ?? topRefuseCat[0]}
+                </div>
+                <div className="text-[11px] text-ink-soft mt-0.5">
+                  {topRefuseCat[1]}{" "}
+                  {topRefuseCat[1] === 1 ? "refusal" : "refusals"}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Genuinely-stub features that need data we don't yet collect. */}
+      <div className="mx-5 mt-5 text-[11px] uppercase tracking-[0.14em] text-ink-mute font-bold">
+        Coming soon
       </div>
       <div className="mx-5 mt-2 mb-3 grid grid-cols-2 gap-2.5">
         {[
-          { emoji: "📈", title: "Growth chart" },
-          { emoji: "⚖️", title: "Balance history" },
-          { emoji: "👥", title: "Peer comparison" },
-          { emoji: "🏆", title: "Veggie collection" },
+          { emoji: "📈", title: "Growth chart", note: "Needs WHO percentile data" },
+          { emoji: "👥", title: "Peer comparison", note: "Needs cohort data" },
         ].map((it) => (
           <div
             key={it.title}
@@ -257,7 +506,7 @@ export default async function InsightsPage() {
               {it.emoji}
             </div>
             <div className="text-[12px] font-semibold text-ink">{it.title}</div>
-            <div className="text-[10px] text-ink-mute mt-0.5">After v0</div>
+            <div className="text-[10px] text-ink-mute mt-0.5">{it.note}</div>
           </div>
         ))}
       </div>
