@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { db, DEFAULT_USER_ID, ensureFoodsSeeded } from "@/lib/db";
+import { db, ensureFoodsSeeded } from "@/lib/db";
+import { getCurrentChildId } from "@/lib/getCurrentChild";
 import TasteTest from "./TasteTest";
 
 export const dynamic = "force-dynamic";
@@ -7,9 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function TastePage() {
   await ensureFoodsSeeded();
 
-  const child = await db.child.findFirst({
-    where: { userId: DEFAULT_USER_ID },
-    orderBy: { createdAt: "desc" },
+  const childId = await getCurrentChildId();
+  if (!childId) redirect("/onboarding");
+  const child = await db.child.findUnique({
+    where: { id: childId },
     select: { id: true, name: true },
   });
   if (!child) redirect("/onboarding");

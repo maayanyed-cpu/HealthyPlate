@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db, DEFAULT_USER_ID } from "@/lib/db";
+import { db } from "@/lib/db";
+import { getCurrentChildId } from "@/lib/getCurrentChild";
 
 export type UpdateDietInput = {
   allergies: string[];
@@ -11,15 +12,11 @@ export type UpdateDietInput = {
 };
 
 export async function updateChildDiet(input: UpdateDietInput): Promise<void> {
-  const child = await db.child.findFirst({
-    where: { userId: DEFAULT_USER_ID },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-  if (!child) throw new Error("No child profile yet — start onboarding from step 1.");
+  const childId = await getCurrentChildId();
+  if (!childId) throw new Error("No child profile yet — start onboarding from step 1.");
 
   await db.child.update({
-    where: { id: child.id },
+    where: { id: childId },
     data: {
       allergies: input.allergies,
       intolerances: input.intolerances,

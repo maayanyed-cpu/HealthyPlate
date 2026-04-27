@@ -1,7 +1,8 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import { db, DEFAULT_USER_ID, ensureDefaultUser } from "@/lib/db";
+import { db, ensureDefaultUser } from "@/lib/db";
 import { detectFoodsFromBytes } from "@/lib/vision";
+import { getCurrentChildId } from "@/lib/getCurrentChild";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,14 +31,9 @@ function foodKeyFromName(name: string): string {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-async function getCurrentChildId(): Promise<string | null> {
+async function resolveChildId(): Promise<string | null> {
   await ensureDefaultUser();
-  const child = await db.child.findFirst({
-    where: { userId: DEFAULT_USER_ID },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-  return child?.id ?? null;
+  return getCurrentChildId();
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -63,7 +59,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
 
-  const childId = await getCurrentChildId();
+  const childId = await resolveChildId();
   if (!childId) {
     return NextResponse.json(
       { error: "No child profile yet — finish onboarding first." },

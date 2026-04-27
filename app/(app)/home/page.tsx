@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { TODAYS_PLAN } from "@/lib/mockData";
-import { getCurrentChild } from "@/lib/getCurrentChild";
+import { getCurrentChild, listChildren } from "@/lib/getCurrentChild";
 import { db } from "@/lib/db";
+import ChildSwitcher from "./ChildSwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,10 @@ function startOfToday(): Date {
 }
 
 export default async function HomePage() {
-  const child = await getCurrentChild();
-  const initial = child.name.charAt(0).toUpperCase();
+  const [child, children] = await Promise.all([
+    getCurrentChild(),
+    listChildren(),
+  ]);
   const todayLabel = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -48,12 +51,15 @@ export default async function HomePage() {
           <div className="text-[13px] text-ink-soft">{todayLabel}</div>
           <div className="font-serif text-[22px] font-medium mt-0.5">Good morning</div>
         </div>
-        <button className="bg-surface border border-line rounded-full pl-3 pr-1 py-1 flex items-center gap-2 text-[13px] font-semibold">
-          {child.name} · {child.age}
-          <span className="w-6 h-6 rounded-full bg-sage-pale flex items-center justify-center text-[12px] text-sage-deep font-bold">
-            {initial}
-          </span>
-        </button>
+        <ChildSwitcher
+          active={{
+            id: child.id,
+            name: child.name,
+            age: child.age,
+            gender: child.gender,
+          }}
+          children={children}
+        />
       </div>
 
       {/* Pending after-shot — only shown when there's actually a meal in progress */}

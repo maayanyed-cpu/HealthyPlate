@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { db, DEFAULT_USER_ID } from "@/lib/db";
+import { db } from "@/lib/db";
+import { getCurrentChildId } from "@/lib/getCurrentChild";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +24,9 @@ const HABIT_LABEL: Record<string, string> = {
 const GENDER_EMOJI: Record<string, string> = { girl: "👧", boy: "👦" };
 
 export default async function ConfirmPage() {
-  const child = await db.child.findFirst({
-    where: { userId: DEFAULT_USER_ID },
-    orderBy: { createdAt: "desc" },
-  });
+  const childId = await getCurrentChildId();
+  if (!childId) redirect("/onboarding");
+  const child = await db.child.findUnique({ where: { id: childId } });
   if (!child) redirect("/onboarding");
 
   const genderEmoji = GENDER_EMOJI[child.gender] ?? "👤";

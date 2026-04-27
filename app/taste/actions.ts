@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db, DEFAULT_USER_ID } from "@/lib/db";
+import { db } from "@/lib/db";
+import { getCurrentChildId } from "@/lib/getCurrentChild";
 
 const VALID_RATINGS = new Set([
   "love", "ok", "maybe", "not-really", "hard-no", "not-sure",
@@ -10,12 +11,8 @@ const VALID_RATINGS = new Set([
 export type RatingInput = { foodId: string; rating: string };
 
 export async function saveTasteRatings(ratings: RatingInput[]): Promise<void> {
-  const child = await db.child.findFirst({
-    where: { userId: DEFAULT_USER_ID },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-  if (!child) throw new Error("No child profile yet — start onboarding from step 1.");
+  const childId = await getCurrentChildId();
+  if (!childId) throw new Error("No child profile yet — start onboarding from step 1.");
 
   const cleaned = ratings.filter((r) => VALID_RATINGS.has(r.rating) && r.foodId);
 
@@ -23,8 +20,8 @@ export async function saveTasteRatings(ratings: RatingInput[]): Promise<void> {
   await Promise.all(
     cleaned.map((r) =>
       db.tasteRating.upsert({
-        where: { childId_foodId: { childId: child.id, foodId: r.foodId } },
-        create: { childId: child.id, foodId: r.foodId, rating: r.rating },
+        where: { childId_foodId: { childId, foodId: r.foodId } },
+        create: { childId, foodId: r.foodId, rating: r.rating },
         update: { rating: r.rating, ratedAt: new Date() },
       }),
     ),

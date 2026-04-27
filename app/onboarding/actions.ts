@@ -1,7 +1,9 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db, DEFAULT_USER_ID, ensureDefaultUser } from "@/lib/db";
+import { ACTIVE_CHILD_COOKIE } from "@/lib/getCurrentChild";
 
 const VALID_GENDERS = new Set(["girl", "boy", "unspecified"]);
 
@@ -31,6 +33,15 @@ export async function createChild(input: CreateChildInput): Promise<{ id: string
       userId: DEFAULT_USER_ID,
     },
     select: { id: true },
+  });
+
+  /* Newly-created child becomes the active child for the rest of
+     onboarding (and for the child-switcher on Home). */
+  cookies().set(ACTIVE_CHILD_COOKIE, child.id, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    httpOnly: true,
+    sameSite: "lax",
   });
 
   revalidatePath("/home");

@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db, DEFAULT_USER_ID, ensureFoodsSeeded } from "@/lib/db";
+import { db, ensureFoodsSeeded } from "@/lib/db";
+import { getCurrentChildId } from "@/lib/getCurrentChild";
 import { FOODS } from "@/lib/mockData";
 import { matchFoodPrefs } from "@/lib/matchFoodPrefs";
 
@@ -15,12 +16,9 @@ export async function updateChildHabits(
   habits: string[],
   prefs?: FoodPreferences,
 ): Promise<void> {
-  const child = await db.child.findFirst({
-    where: { userId: DEFAULT_USER_ID },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-  if (!child) throw new Error("No child profile yet — start onboarding from step 1.");
+  const childId = await getCurrentChildId();
+  if (!childId) throw new Error("No child profile yet — start onboarding from step 1.");
+  const child = { id: childId };
 
   /* Trim and normalize empty strings to null so we don't litter the DB
      with whitespace-only placeholders. */
