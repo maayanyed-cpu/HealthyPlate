@@ -45,7 +45,7 @@ export async function updateChildHabits(
      to preserve any rating the parent has already set (manually or via
      a prior habits submission). */
   if (prefs) {
-    const matches = matchFoodPrefs(prefs, FOODS);
+    const matches = await matchFoodPrefs(prefs, FOODS);
     const total = matches.likes.length + matches.dislikes.length + matches.maybes.length;
     if (total > 0) {
       await ensureFoodsSeeded();

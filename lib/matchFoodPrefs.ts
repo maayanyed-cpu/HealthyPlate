@@ -1,4 +1,8 @@
+import "server-only";
+import Anthropic from "@anthropic-ai/sdk";
 import type { Food } from "./mockData";
+
+const client = new Anthropic();
 
 export type FoodPrefs = {
   foodLikes: string;
@@ -12,15 +16,129 @@ export type MatchedFoods = {
   maybes: string[];
 };
 
+const PROMPT_INTRO =
+  "A parent has filled three textareas about their child's food preferences. Map their wording to specific food IDs from the catalog below. Handle synonyms and group phrases generously: \"berries\" → strawberry/blueberry/raspberry/blackberry; \"anything green\" → leafy greens + green vegetables; \"no fish\" → all seafood proteins (salmon/tuna/cod/sardine/anchovy/etc); \"any cheese\" → every dairy cheese in the catalog. Return ONLY food IDs that exist in the catalog — do not invent IDs. If a food appears across multiple text fields by accident, prefer dislikes > likes > maybes (the parent's negative signals are most actionable).";
+
+const FOOD_PREFS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["likes", "dislikes", "maybes"],
+  properties: {
+    likes: {
+      type: "array",
+      items: { type: "string" },
+      description: "Food IDs the child likes / loves.",
+    },
+    dislikes: {
+      type: "array",
+      items: { type: "string" },
+      description: "Food IDs the child dislikes / refuses.",
+    },
+    maybes: {
+      type: "array",
+      items: { type: "string" },
+      description: "Food IDs the child might eat with the right conditions.",
+    },
+  },
+} as const;
+
+function buildCatalogBlock(foods: Food[]): string {
+  const grouped: Record<string, Array<{ id: string; name: string }>> = {};
+  for (const f of foods) {
+    if (!grouped[f.category]) grouped[f.category] = [];
+    grouped[f.category].push({ id: f.id, name: f.name });
+  }
+  return Object.entries(grouped)
+    .map(
+      ([cat, items]) =>
+        `${cat}:\n${items.map((i) => `  ${i.id}\t${i.name}`).join("\n")}`,
+    )
+    .join("\n\n");
+}
+
+function dedupeAcrossBuckets(
+  raw: Partial<MatchedFoods>,
+  validIds: Set<string>,
+): MatchedFoods {
+  const filterValid = (arr: string[] | undefined): string[] =>
+    (arr ?? []).filter((id) => validIds.has(id));
+  const dislikes = filterValid(raw.dislikes);
+  const taken = new Set<string>(dislikes);
+  const likes = filterValid(raw.likes).filter((id) => !taken.has(id));
+  for (const id of likes) taken.add(id);
+  const maybes = filterValid(raw.maybes).filter((id) => !taken.has(id));
+  return { likes, dislikes, maybes };
+}
+
+/* PUBLIC: best-effort LLM extraction with a regex fallback. The action
+   layer awaits this once per habits-form submission. */
+export async function matchFoodPrefs(
+  prefs: FoodPrefs,
+  foods: Food[],
+): Promise<MatchedFoods> {
+  const hasAnyText =
+    prefs.foodLikes.trim() ||
+    prefs.foodDislikes.trim() ||
+    prefs.foodMaybes.trim();
+  if (!hasAnyText) return { likes: [], dislikes: [], maybes: [] };
+
+  try {
+    const userMessage =
+      `${PROMPT_INTRO}\n\n` +
+      `PARENT'S TEXT\n` +
+      `LIKES: ${prefs.foodLikes.trim() || "(blank)"}\n` +
+      `DISLIKES: ${prefs.foodDislikes.trim() || "(blank)"}\n` +
+      `MAYBES: ${prefs.foodMaybes.trim() || "(blank)"}\n\n` +
+      `FOOD CATALOG (id and human name, grouped by category)\n` +
+      buildCatalogBlock(foods);
+
+    /* Haiku 4.5 — extraction task; ~5-10x cheaper and faster than
+       Opus for this shape of work. Structured outputs constrain the
+       reply to the schema we need. */
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: userMessage }],
+      output_config: {
+        format: { type: "json_schema", schema: FOOD_PREFS_SCHEMA },
+      },
+    });
+
+    const textBlock = response.content.find(
+      (b): b is Anthropic.TextBlock => b.type === "text",
+    );
+    if (!textBlock) throw new Error("No text block in response");
+
+    const parsed = JSON.parse(textBlock.text) as Partial<MatchedFoods>;
+    const validIds = new Set(foods.map((f) => f.id));
+    const matched = dedupeAcrossBuckets(parsed, validIds);
+    console.log(
+      "[matchFoodPrefs/llm] matched",
+      `likes=${matched.likes.length}`,
+      `dislikes=${matched.dislikes.length}`,
+      `maybes=${matched.maybes.length}`,
+    );
+    return matched;
+  } catch (e) {
+    console.error(
+      "[matchFoodPrefs/llm] failed, falling back to regex matcher:",
+      e instanceof Error ? e.message : e,
+    );
+    return matchFoodPrefsViaRegex(prefs, foods);
+  }
+}
+
+/* ------------------------------------------------------------------
+   Regex fallback. Kept as a deterministic safety net in case the
+   Anthropic call fails (network, rate limit, model error). Also
+   exported so it can be used in tests or offline contexts.
+   ------------------------------------------------------------------ */
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/* Generate plural/singular variants of a food name for fuzzy matching.
-   Operates on the LAST word of multi-word names ("sweet potato" →
-   "sweet potatoes"). Doesn't handle every irregular plural — we accept
-   misses on rare cases like "tomato" → "tomatoes" (handled below) in
-   exchange for staying simple. */
+/* Generate plural/singular variants of a food name for fuzzy matching. */
 function variantsFor(name: string): string[] {
   const lower = name.toLowerCase().trim();
   const words = lower.split(/\s+/);
@@ -30,21 +148,19 @@ function variantsFor(name: string): string[] {
 
   const variants = new Set<string>([lower]);
 
-  /* Stem: try to derive the singular form */
   let stem = last;
   if (last.endsWith("ies") && last.length > 4) stem = last.slice(0, -3) + "y";
   else if (last.endsWith("oes") && last.length > 3) stem = last.slice(0, -2);
   else if (last.endsWith("ves") && last.length > 3) stem = last.slice(0, -3) + "f";
   else if (last.endsWith("s") && last.length > 1 && !last.endsWith("ss")) stem = last.slice(0, -1);
 
-  /* Plural: try to derive the plural form */
   let plural: string;
   if (stem.endsWith("y") && stem.length > 1 && !/[aeiou]y$/.test(stem)) {
     plural = stem.slice(0, -1) + "ies";
   } else if (/[sxz]$|[cs]h$/.test(stem)) {
     plural = stem + "es";
   } else if (stem.endsWith("o") && stem.length > 1 && !/[aeiou]o$/.test(stem)) {
-    plural = stem + "es"; // tomato → tomatoes, potato → potatoes
+    plural = stem + "es";
   } else {
     plural = stem + "s";
   }
@@ -56,8 +172,6 @@ function variantsFor(name: string): string[] {
 
 function matchesFoodInText(food: Food, text: string): boolean {
   for (const variant of variantsFor(food.name)) {
-    /* Skip very short variants to dampen false positives; require at least
-       3 chars on the last word so words like "a" or "is" can't match. */
     const lastWord = variant.split(/\s+/).slice(-1)[0];
     if (lastWord.length < 3) continue;
     const re = new RegExp(`\\b${escapeRegex(variant)}\\b`, "i");
@@ -75,23 +189,17 @@ function matchFoodsInText(text: string, foods: Food[]): string[] {
   return ids;
 }
 
-/* Map free-text food preferences to food IDs from the catalog. A food can
-   appear in multiple text fields by accident; we resolve in priority
-   order: dislikes > likes > maybes. Negative signals are the most
-   actionable and shouldn't be diluted by an accidental positive match. */
-export function matchFoodPrefs(
+export function matchFoodPrefsViaRegex(
   prefs: FoodPrefs,
   foods: Food[],
 ): MatchedFoods {
-  const likesAll = matchFoodsInText(prefs.foodLikes, foods);
-  const dislikesAll = matchFoodsInText(prefs.foodDislikes, foods);
-  const maybesAll = matchFoodsInText(prefs.foodMaybes, foods);
-
-  const taken = new Set<string>(dislikesAll);
-  const dislikes = dislikesAll;
-  const likes = likesAll.filter((id) => !taken.has(id));
-  for (const id of likes) taken.add(id);
-  const maybes = maybesAll.filter((id) => !taken.has(id));
-
-  return { likes, dislikes, maybes };
+  const validIds = new Set(foods.map((f) => f.id));
+  return dedupeAcrossBuckets(
+    {
+      likes: matchFoodsInText(prefs.foodLikes, foods),
+      dislikes: matchFoodsInText(prefs.foodDislikes, foods),
+      maybes: matchFoodsInText(prefs.foodMaybes, foods),
+    },
+    validIds,
+  );
 }

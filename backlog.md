@@ -54,7 +54,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Step 3 (habits + food preferences) | ✅ Built | 🟡 Partial — habits checkboxes from prototype + a new free-text questionnaire (likes/dislikes/maybes); the prototype itself doesn't have the textareas, this is a product addition | ✅ Done — `updateChildHabits` writes `habits[]` + `foodLikes` / `foodDislikes` / `foodMaybes`; auto-derived `TasteRating` rows inserted via `matchFoodPrefs` so prefs flow into the taste graph immediately | Matcher uses simple substring + plural variants — misses synonyms ("berries" → strawberry/blueberry/raspberry) and group phrases ("anything green"). Could promote to LLM extraction in a future sprint. |
+| Step 3 (habits + food preferences) | ✅ Built | 🟡 Partial — habits checkboxes from prototype + a new free-text questionnaire (likes/dislikes/maybes); the prototype itself doesn't have the textareas, this is a product addition | ✅ Done — `updateChildHabits` writes `habits[]` + `foodLikes` / `foodDislikes` / `foodMaybes`; auto-derived `TasteRating` rows inserted via the LLM-backed `matchFoodPrefs` (Claude Haiku 4.5 with structured outputs) so synonyms ("berries", "anything green", "no fish") and group phrases all map. Regex matcher kept as fallback if Anthropic is unreachable | Add LLM call latency (~3-5s on submit) — could move to background-task pattern if it feels slow |
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
@@ -156,10 +156,9 @@ The snap loop is real end-to-end, the 300-food taste catalog is in, and onboardi
 - "Time to measure" sage-gradient banner on Home gated on `lastMeasuredAt > 30 days ago` OR null.
 - `/measure` page lets parents update H/W anytime; saves stamp `lastMeasuredAt`, clears the Home banner until the next 30-day window.
 
-### 4. Smarter free-text matching for onboarding step 3
-- Current matcher misses synonyms ("berries" → strawberry/blueberry/raspberry) and group phrases ("anything green" → all green vegetables, "no fish" → all seafood).
-- Promote `matchFoodPrefs` to an Anthropic LLM extraction call: send the three text blocks + a category-grouped catalog, parse a structured response of {foodId, rating} pairs.
-- Optional: keep the regex matcher as a fallback so the taste test still pre-fills if the LLM call fails.
+### 4. ~~Smarter free-text matching for onboarding step 3~~ ✅ **Done** (commit `7d66bf1`+)
+- `matchFoodPrefs` now calls Claude Haiku 4.5 with structured outputs to extract food IDs from each text block — handles synonyms ("berries", "anything green", "no fish") and group phrases.
+- Regex matcher kept as fallback if the Anthropic call fails.
 
 ### 5. After-shot real `percentEaten` (a real second vision pass)
 - Currently `saveAfterSnap` copies before-foods with `percentEaten: 50` placeholder.
