@@ -13,7 +13,7 @@ function startOfToday(): Date {
 }
 
 export default async function HomePage() {
-  const [child, children] = await Promise.all([
+  const [child, kids] = await Promise.all([
     getCurrentChild(),
     listChildren(),
   ]);
@@ -58,7 +58,7 @@ export default async function HomePage() {
             age: child.age,
             gender: child.gender,
           }}
-          children={children}
+          kids={kids}
         />
       </div>
 

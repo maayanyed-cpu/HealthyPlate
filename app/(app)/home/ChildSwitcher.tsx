@@ -19,10 +19,10 @@ const GENDER_EMOJI: Record<string, string> = {
 
 export default function ChildSwitcher({
   active,
-  children,
+  kids,
 }: {
   active: { id: string | null; name: string; age: number; gender: string };
-  children: ChildOption[];
+  kids: ChildOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -67,7 +67,7 @@ export default function ChildSwitcher({
   }
 
   const initial = active.name.charAt(0).toUpperCase();
-  const showCaret = children.length > 1 || active.id !== null;
+  const showCaret = kids.length > 1 || active.id !== null;
 
   return (
     <div className="relative" ref={wrapperRef}>
@@ -109,7 +109,7 @@ export default function ChildSwitcher({
           <div className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-ink-mute font-bold">
             My kids
           </div>
-          {children.map((c) => {
+          {kids.map((c) => {
             const selected = c.id === active.id;
             const emoji = GENDER_EMOJI[c.gender] ?? "👤";
             return (
