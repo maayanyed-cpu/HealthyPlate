@@ -98,7 +98,7 @@
 
 | Feature Name | Status | Design Fidelity | Database Connection | Technical Gap |
 |---|---|---|---|---|
-| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); both before-shot and after-shot photos load via authenticated proxy (`/api/snap-photo/{mealId}?phase=...`); balance/nutrients/recommendation computed via `computeAnalysis()`; per-food `percentEaten` from a real second Anthropic vision pass that compares the before + after photos | Per-food nutrient values are illustrative (not USDA); recommendation is a rule-based template (not LLM-generated) |
+| Meal Analysis | ✅ Built | ✅ Done | ✅ Done — reads `Meal.detected` (phase=after); both before-shot and after-shot photos load via authenticated proxy (`/api/snap-photo/{mealId}?phase=...`); balance/nutrients/recommendation computed via `computeAnalysis()`; per-food `percentEaten` from a real second Anthropic vision pass; per-food nutrients from a curated table covering ~60 high-impact foods + per-category defaults for the rest of the 300-food catalog | Nutrient values are curated approximations (close to USDA but not strictly sourced); recommendation is a rule-based template (not LLM-generated) |
 
 ---
 
@@ -164,10 +164,10 @@ The snap loop is real end-to-end, the 300-food taste catalog is in, and onboardi
 - `detectPercentEatenFromBytes` in `lib/vision.ts` runs a second Opus 4.7 vision pass comparing the BEFORE + AFTER photos against the known food list, returns `{name, percentEaten}` per food (0-100).
 - After-shot route refetches the before-photo bytes via the R/W token, calls the function, applies the estimates to the new after-phase `DetectedFood` rows. Falls back to 50% if anything fails (no before-photo, network blip, model error).
 
-### 6. USDA nutrient data
-- Replace `lib/nutrition.ts` illustrative numbers with USDA FoodData Central data for the 300-food catalog.
-- Either fetch via the FDC API (requires a free API key) or bundle a curated JSON.
-- Unblocks accurate Meal Analysis nutrient breakdowns.
+### 6. ~~Nutrient data (scope A: curated)~~ ✅ **Done** (commit `67f0f4b`+)
+- `lib/nutrition.ts` now has explicit per-food profiles for ~60 high-impact foods (high-vitA vegetables, leafy greens, all proteins, common grains, dairy, snacks) plus per-category fallback profiles for the remaining ~240 foods in the catalog.
+- Every food now contributes something realistic to the Meal Analysis nutrient totals; before this commit any food not in the original 11-item table contributed zero.
+- Future scope-B sprint could replace this with a real USDA FoodData Central fetch (free API key + bundled JSON build step).
 
 ### 7. Plan + Insights MVPs
 - Use the (now meaningful) taste graph + meal history to drive a real weekly plan and a real balance history.
