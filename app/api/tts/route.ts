@@ -54,9 +54,13 @@ export async function GET(request: Request): Promise<Response> {
   const text = (url.searchParams.get("text") ?? "").slice(0, MAX_TEXT_LEN).trim();
   if (!text) return new NextResponse("Missing text param", { status: 400 });
 
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  /* Accept either spelling — Vercel UI doesn't normalize and the user
+     may have typed ELEVEN_LABS_API_KEY (with underscore) or
+     ELEVENLABS_API_KEY (joined). */
+  const apiKey =
+    process.env.ELEVENLABS_API_KEY ?? process.env.ELEVEN_LABS_API_KEY;
   if (!apiKey) {
-    console.log("[tts] ELEVENLABS_API_KEY not set");
+    console.log("[tts] no ElevenLabs API key set");
     return new NextResponse("TTS disabled (no API key)", { status: 503 });
   }
 
