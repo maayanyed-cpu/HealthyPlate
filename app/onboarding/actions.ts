@@ -47,16 +47,41 @@ export async function createChild(input: CreateChildInput): Promise<{ id: string
 
   await ensureDefaultUser();
 
-  const child = await db.child.create({
-    data: {
-      name,
-      age: input.age,
-      gender: input.gender,
-      userId: DEFAULT_USER_ID,
-      ...measurementData,
-    },
-    select: { id: true },
-  });
+  /* If the user previously snapped a meal as a guest, the upload route
+     auto-created a placeholder child named "Your child". Claim it on
+     onboarding submit so the guest's meals carry over instead of being
+     orphaned on a hidden child. */
+  const guestCookieId = cookies().get(ACTIVE_CHILD_COOKIE)?.value ?? null;
+  let claimableGuestId: string | null = null;
+  if (guestCookieId) {
+    const candidate = await db.child.findFirst({
+      where: { id: guestCookieId, userId: DEFAULT_USER_ID, name: "Your child" },
+      select: { id: true },
+    });
+    claimableGuestId = candidate?.id ?? null;
+  }
+
+  const child = claimableGuestId
+    ? await db.child.update({
+        where: { id: claimableGuestId },
+        data: {
+          name,
+          age: input.age,
+          gender: input.gender,
+          ...measurementData,
+        },
+        select: { id: true },
+      })
+    : await db.child.create({
+        data: {
+          name,
+          age: input.age,
+          gender: input.gender,
+          userId: DEFAULT_USER_ID,
+          ...measurementData,
+        },
+        select: { id: true },
+      });
 
   /* Newly-created child becomes the active child for the rest of
      onboarding (and for the child-switcher on Home). */

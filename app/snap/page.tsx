@@ -257,21 +257,28 @@ function SnapInner() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4">
+      <div className="flex items-center justify-between px-5 py-4 gap-2">
         <Link
           href="/home"
           aria-label="Close"
-          className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-cream-soft"
+          className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-cream-soft flex-shrink-0"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </Link>
-        <div className="text-[13px] font-semibold">
+        <div className="text-[13px] font-semibold flex-1 text-center">
           {phase === "celebrating" ? "Power-Up complete!" : "Snap a meal"}
         </div>
-        <div className="w-9 h-9" />
+        {/* Opt-in registration. Always visible — copy is gentle so it doesn't
+            nag returning users who already onboarded. */}
+        <Link
+          href="/onboarding"
+          className="text-[11px] font-semibold text-cream-soft/80 hover:text-cream-soft px-3 py-1.5 rounded-full bg-white/10 flex-shrink-0 whitespace-nowrap"
+        >
+          Set up →
+        </Link>
       </div>
 
       {/* Mode toggle — only when idle */}

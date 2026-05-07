@@ -1,8 +1,9 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import { db, ensureDefaultUser } from "@/lib/db";
+import { cookies } from "next/headers";
+import { db, DEFAULT_USER_ID, ensureDefaultUser } from "@/lib/db";
 import { detectFoodsFromBytes, detectPercentEatenFromBytes } from "@/lib/vision";
-import { getCurrentChildId } from "@/lib/getCurrentChild";
+import { ACTIVE_CHILD_COOKIE, getCurrentChildId } from "@/lib/getCurrentChild";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -31,9 +32,32 @@ function foodKeyFromName(name: string): string {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-async function resolveChildId(): Promise<string | null> {
+/* Returns the active child's ID, auto-creating a "guest" placeholder
+   if no child exists yet — lets visitors try the camera before
+   committing to onboarding. The placeholder name lights up the snap
+   header's "Set up profile" CTA so they can register later. */
+async function resolveChildId(): Promise<string> {
   await ensureDefaultUser();
-  return getCurrentChildId();
+  const existing = await getCurrentChildId();
+  if (existing) return existing;
+
+  const child = await db.child.create({
+    data: {
+      name: "Your child",
+      age: 5,
+      gender: "unspecified",
+      userId: DEFAULT_USER_ID,
+    },
+    select: { id: true },
+  });
+  cookies().set(ACTIVE_CHILD_COOKIE, child.id, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    httpOnly: true,
+    sameSite: "lax",
+  });
+  console.log("[snap-route] auto-created guest child:", child.id);
+  return child.id;
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -60,12 +84,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const childId = await resolveChildId();
-  if (!childId) {
-    return NextResponse.json(
-      { error: "No child profile yet — finish onboarding first." },
-      { status: 400 },
-    );
-  }
 
   console.log("[snap-route] uploading to blob, mode:", mode, "size:", file.size);
   /* Try public first (the Vercel Blob default). If the store is configured for
