@@ -17,6 +17,32 @@ type DetectedFood = {
   box: { x: number; y: number; width: number; height: number };
 };
 
+/* Browser TTS via Web Speech API. Free, no key, no network call —
+   uses the device's default voice (Samantha on iOS, Google Voice on
+   Android, etc.). Slightly higher pitch + a hair faster gives it a
+   friendly "kid mascot" tone. */
+function speakBrowser(text: string): void {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    u.pitch = 1.15;
+    u.volume = 0.95;
+    window.speechSynthesis.speak(u);
+  } catch {
+    /* iOS Safari throws if speech engine not yet warm; ignore silently. */
+  }
+}
+
+function cancelSpeech(): void {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+  } catch {
+    /* no-op */
+  }
+}
+
 /* Resize + JPEG-encode the image client-side so it stays well under
    Anthropic's 5MB-after-base64 vision limit. Phone photos are routinely
    4-12 MB raw which would exceed the limit; downscaling to 1600px on
@@ -111,21 +137,15 @@ function SnapInner() {
     return () => clearInterval(interval);
   }, [phase]);
 
-  /* Mia voices "Let's see!" while the AI is identifying foods. The shutter
+  /* "Let's see!" while the AI is identifying foods, via the browser's
+     built-in speechSynthesis (no third-party API key needed). The shutter
      tap counts as the user gesture so autoplay is allowed. */
   useEffect(() => {
     if (phase !== "scanning") return;
-    let ttsAudio: HTMLAudioElement | null = null;
-    const delay = setTimeout(() => {
-      ttsAudio = new Audio(`/api/tts?text=${encodeURIComponent("Let's see!")}`);
-      ttsAudio.volume = 0.95;
-      ttsAudio.play().catch((err) => {
-        console.log("[snap] scan TTS not playing:", err);
-      });
-    }, 250);
+    const delay = setTimeout(() => speakBrowser("Let's see!"), 250);
     return () => {
       clearTimeout(delay);
-      if (ttsAudio) ttsAudio.pause();
+      cancelSpeech();
     };
   }, [phase]);
 
@@ -157,22 +177,17 @@ function SnapInner() {
       console.log("[snap] HealthyPlate.mp4 not playing:", err);
     });
 
-    /* Mia (ElevenLabs) speaks an encouraging line when vegetables show up
-       on the plate. Routes through /api/tts which proxies the API call
-       server-side so the key stays private. Plays after the chime so the
-       two cues don't step on each other. */
+    /* When at least one vegetable shows up on the plate, the device's
+       built-in speechSynthesis voice speaks an encouraging line. No
+       third-party key required. Plays after the chime so the two cues
+       don't step on each other. */
     const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
-    let ttsAudio: HTMLAudioElement | null = null;
     let t3: ReturnType<typeof setTimeout> | null = null;
     if (hasVeggies) {
-      const line =
-        "Great job! You have veggies in your plate making you stronger!";
       t3 = setTimeout(() => {
-        ttsAudio = new Audio(`/api/tts?text=${encodeURIComponent(line)}`);
-        ttsAudio.volume = 0.95;
-        ttsAudio.play().catch((err) => {
-          console.log("[snap] Mia TTS not playing:", err);
-        });
+        speakBrowser(
+          "Great job! You have veggies in your plate making you stronger!",
+        );
       }, 1100);
     }
 
@@ -181,7 +196,7 @@ function SnapInner() {
       clearTimeout(t2);
       if (t3) clearTimeout(t3);
       audio.pause();
-      if (ttsAudio) ttsAudio.pause();
+      cancelSpeech();
     };
   }, [phase, detectedFoods]);
 
