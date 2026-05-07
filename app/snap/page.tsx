@@ -111,6 +111,24 @@ function SnapInner() {
     return () => clearInterval(interval);
   }, [phase]);
 
+  /* Mia voices "Let's see!" while the AI is identifying foods. The shutter
+     tap counts as the user gesture so autoplay is allowed. */
+  useEffect(() => {
+    if (phase !== "scanning") return;
+    let ttsAudio: HTMLAudioElement | null = null;
+    const delay = setTimeout(() => {
+      ttsAudio = new Audio(`/api/tts?text=${encodeURIComponent("Let's see!")}`);
+      ttsAudio.volume = 0.95;
+      ttsAudio.play().catch((err) => {
+        console.log("[snap] scan TTS not playing:", err);
+      });
+    }, 250);
+    return () => {
+      clearTimeout(delay);
+      if (ttsAudio) ttsAudio.pause();
+    };
+  }, [phase]);
+
   /* Big finish: confetti + audio when we enter the celebrating phase. */
   useEffect(() => {
     if (phase !== "celebrating") return;
@@ -373,6 +391,51 @@ function SnapInner() {
             />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/40 rounded-full text-[11px] font-bold tracking-wider uppercase text-[#B8E1B8] backdrop-blur-sm">
               Scanning…
+            </div>
+
+            {/* Sweet mascot in the bottom-right with a "LET'S SEE!" speech
+                bubble. Wiggles gently while the AI thinks. */}
+            <div className="absolute bottom-4 right-4 flex items-end gap-2 pointer-events-none animate-fade-in">
+              <div className="bg-cream-soft border-2 border-sage-pale rounded-[14px] px-3 py-2 shadow-md mb-3 relative">
+                <div className="font-serif text-[13px] font-bold text-ink leading-tight whitespace-nowrap">
+                  LET&apos;S SEE!
+                </div>
+                {/* Tail pointing down-right at the carrot */}
+                <div
+                  className="absolute -bottom-[8px] right-3 w-0 h-0"
+                  style={{
+                    borderLeft: "8px solid transparent",
+                    borderRight: "8px solid transparent",
+                    borderTop: "9px solid var(--cream-soft)",
+                  }}
+                />
+                <div
+                  className="absolute -bottom-[10px] right-3 w-0 h-0 -z-10"
+                  style={{
+                    borderLeft: "9px solid transparent",
+                    borderRight: "9px solid transparent",
+                    borderTop: "10px solid var(--sage-pale)",
+                  }}
+                />
+              </div>
+              <div className="relative w-[60px] h-[60px] rounded-full bg-cream-soft border-[3px] border-sage-pale shadow-md flex items-center justify-center text-[34px] animate-wiggle">
+                <span aria-hidden>🥕</span>
+                {/* SVG eyes over the carrot to make it a character */}
+                <svg
+                  viewBox="0 0 100 100"
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  aria-hidden
+                >
+                  <g transform="translate(50, 36)">
+                    <circle cx="-10" cy="0" r="7" fill="#FAF7F0" stroke="#1A1A1A" strokeWidth="1.6" />
+                    <circle cx="10" cy="0" r="7" fill="#FAF7F0" stroke="#1A1A1A" strokeWidth="1.6" />
+                    <circle cx="-10" cy="2" r="3" fill="#1A1A1A" />
+                    <circle cx="10" cy="2" r="3" fill="#1A1A1A" />
+                    <circle cx="-8.5" cy="-1" r="1.2" fill="#FFFFFF" />
+                    <circle cx="11.5" cy="-1" r="1.2" fill="#FFFFFF" />
+                  </g>
+                </svg>
+              </div>
             </div>
           </>
         )}
