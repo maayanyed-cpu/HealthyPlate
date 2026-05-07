@@ -43,6 +43,25 @@ function cancelSpeech(): void {
   }
 }
 
+/* iOS Safari silently drops speechSynthesis calls that fire outside a
+   user-gesture stack — including everything inside setTimeout. We prime
+   the engine with a silent utterance the moment the shutter is tapped
+   (still inside the gesture) so the celebration + scan utterances later
+   actually play. Also resumes/cancels in case a previous call left the
+   queue paused. */
+function unlockSpeech(): void {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
+    const primer = new SpeechSynthesisUtterance(" ");
+    primer.volume = 0;
+    window.speechSynthesis.speak(primer);
+  } catch {
+    /* no-op */
+  }
+}
+
 /* Resize + JPEG-encode the image client-side so it stays well under
    Anthropic's 5MB-after-base64 vision limit. Phone photos are routinely
    4-12 MB raw which would exceed the limit; downscaling to 1600px on
@@ -211,6 +230,10 @@ function SnapInner() {
 
   function triggerShutter(fileForUpload: File | null) {
     if (phase !== "idle") return;
+    /* Prime browser speech engine while we're still inside the user-tap
+       call stack — without this, iOS Safari drops the later speech calls
+       that fire from useEffect setTimeouts. */
+    unlockSpeech();
     setError(null);
     setPhase("scanning");
 
