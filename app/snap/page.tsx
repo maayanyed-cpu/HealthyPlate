@@ -139,12 +139,33 @@ function SnapInner() {
       console.log("[snap] HealthyPlate.mp4 not playing:", err);
     });
 
+    /* Mia (ElevenLabs) speaks an encouraging line when vegetables show up
+       on the plate. Routes through /api/tts which proxies the API call
+       server-side so the key stays private. Plays after the chime so the
+       two cues don't step on each other. */
+    const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
+    let ttsAudio: HTMLAudioElement | null = null;
+    let t3: ReturnType<typeof setTimeout> | null = null;
+    if (hasVeggies) {
+      const line =
+        "Great job! You have veggies in your plate making you stronger!";
+      t3 = setTimeout(() => {
+        ttsAudio = new Audio(`/api/tts?text=${encodeURIComponent(line)}`);
+        ttsAudio.volume = 0.95;
+        ttsAudio.play().catch((err) => {
+          console.log("[snap] Mia TTS not playing:", err);
+        });
+      }, 1100);
+    }
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      if (t3) clearTimeout(t3);
       audio.pause();
+      if (ttsAudio) ttsAudio.pause();
     };
-  }, [phase]);
+  }, [phase, detectedFoods]);
 
   function handlePickFile(file: File) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
