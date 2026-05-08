@@ -49,11 +49,15 @@ async function resolveVoiceId(apiKey: string): Promise<string> {
     const data = (await res.json()) as {
       voices: Array<{ voice_id: string; name: string }>;
     };
-    /* ElevenLabs voice names often include a tagline (e.g. "Mia - Lively,
-       Crisp, Expressive"). Match by first-word so the suffix doesn't
-       break us. */
+    /* Try matchers in increasing fuzziness:
+         1. First-word match — "Mia" hits "Mia - Lively..."
+         2. Substring match anywhere in the voice name — lets
+            TTS_VOICE_NAME=child hit "Aria - Young Child Voice", etc. */
     const re = escapeRegexFirstWord(targetName);
-    const found = data.voices.find((v) => re.test(v.name.trim()));
+    const lowerTarget = targetName.toLowerCase();
+    const found =
+      data.voices.find((v) => re.test(v.name.trim())) ??
+      data.voices.find((v) => v.name.toLowerCase().includes(lowerTarget));
     if (found) {
       voiceIdCache = found.voice_id;
       console.log(`[tts] resolved '${targetName}' → ${found.name}`, found.voice_id);
