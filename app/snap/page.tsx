@@ -17,48 +17,20 @@ type DetectedFood = {
   box: { x: number; y: number; width: number; height: number };
 };
 
-/* Browser TTS via Web Speech API. Free, no key, no network call —
-   uses the device's default voice (Samantha on iOS, Google Voice on
-   Android, etc.). Slightly higher pitch + a hair faster gives it a
-   friendly "kid mascot" tone. */
-function speakBrowser(text: string): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
+/* Helper to fire an mp3 from the /api/tts ElevenLabs proxy. The same
+   <Audio> mechanism as the celebration chime, so if the chime plays
+   through on the device, this should too. */
+function playTts(text: string): HTMLAudioElement | null {
+  if (typeof window === "undefined") return null;
   try {
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.05;
-    u.pitch = 1.15;
-    u.volume = 0.95;
-    window.speechSynthesis.speak(u);
+    const audio = new Audio(`/api/tts?text=${encodeURIComponent(text)}`);
+    audio.volume = 0.95;
+    audio.play().catch((err) => {
+      console.log("[snap] TTS not playing:", err);
+    });
+    return audio;
   } catch {
-    /* iOS Safari throws if speech engine not yet warm; ignore silently. */
-  }
-}
-
-function cancelSpeech(): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  try {
-    window.speechSynthesis.cancel();
-  } catch {
-    /* no-op */
-  }
-}
-
-/* iOS Safari silently drops speechSynthesis calls that fire outside a
-   user-gesture stack — including everything inside setTimeout. We prime
-   the engine with a silent utterance the moment the shutter is tapped
-   (still inside the gesture) so the celebration + scan utterances later
-   actually play. Also resumes/cancels in case a previous call left the
-   queue paused. */
-function unlockSpeech(): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  try {
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
-    const primer = new SpeechSynthesisUtterance(" ");
-    primer.volume = 0;
-    window.speechSynthesis.speak(primer);
-  } catch {
-    /* no-op */
+    return null;
   }
 }
 
@@ -156,15 +128,18 @@ function SnapInner() {
     return () => clearInterval(interval);
   }, [phase]);
 
-  /* "Let's see!" while the AI is identifying foods, via the browser's
-     built-in speechSynthesis (no third-party API key needed). The shutter
-     tap counts as the user gesture so autoplay is allowed. */
+  /* "Let's see!" while the AI is identifying foods. ElevenLabs voice
+     via /api/tts. The shutter tap counts as the user gesture so the
+     subsequent Audio.play() is allowed. */
   useEffect(() => {
     if (phase !== "scanning") return;
-    const delay = setTimeout(() => speakBrowser("Let's see!"), 250);
+    let ttsAudio: HTMLAudioElement | null = null;
+    const delay = setTimeout(() => {
+      ttsAudio = playTts("Let's see!");
+    }, 250);
     return () => {
       clearTimeout(delay);
-      cancelSpeech();
+      if (ttsAudio) ttsAudio.pause();
     };
   }, [phase]);
 
@@ -196,15 +171,15 @@ function SnapInner() {
       console.log("[snap] HealthyPlate.mp4 not playing:", err);
     });
 
-    /* When at least one vegetable shows up on the plate, the device's
-       built-in speechSynthesis voice speaks an encouraging line. No
-       third-party key required. Plays after the chime so the two cues
-       don't step on each other. */
+    /* When at least one vegetable shows up on the plate, ElevenLabs
+       (Mia) speaks an encouraging line via the /api/tts proxy. Plays
+       after the chime so the two cues don't step on each other. */
     const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
     let t3: ReturnType<typeof setTimeout> | null = null;
+    let ttsAudio: HTMLAudioElement | null = null;
     if (hasVeggies) {
       t3 = setTimeout(() => {
-        speakBrowser(
+        ttsAudio = playTts(
           "Great job! You have veggies in your plate making you stronger!",
         );
       }, 1100);
@@ -215,7 +190,7 @@ function SnapInner() {
       clearTimeout(t2);
       if (t3) clearTimeout(t3);
       audio.pause();
-      cancelSpeech();
+      if (ttsAudio) ttsAudio.pause();
     };
   }, [phase, detectedFoods]);
 
@@ -230,10 +205,6 @@ function SnapInner() {
 
   function triggerShutter(fileForUpload: File | null) {
     if (phase !== "idle") return;
-    /* Prime browser speech engine while we're still inside the user-tap
-       call stack — without this, iOS Safari drops the later speech calls
-       that fire from useEffect setTimeouts. */
-    unlockSpeech();
     setError(null);
     setPhase("scanning");
 
