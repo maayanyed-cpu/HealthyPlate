@@ -9,12 +9,33 @@ export const runtime = "nodejs";
    audio for 24 hours since text → audio is deterministic. */
 
 const FALLBACK_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Bella — default pre-made voice
+const DEFAULT_VOICE_NAME = "Mia";
 const MAX_TEXT_LEN = 500;
 
 let voiceIdCache: string | null = null;
 
+function escapeRegexFirstWord(name: string): RegExp {
+  /* Match a voice whose name starts with `name` followed by space, dash,
+     comma, or end of string. So "Mia" matches "Mia - Lively, Crisp,
+     Expressive" but not "Miami" or "Mialey". */
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}(\\s|-|,|$)`, "i");
+}
+
 async function resolveVoiceId(apiKey: string): Promise<string> {
   if (voiceIdCache) return voiceIdCache;
+
+  /* TTS_VOICE_ID env wins — bypasses lookup entirely if you have a
+     specific voice_id in mind. Useful for cloned/private voices. */
+  const explicitId = process.env.TTS_VOICE_ID?.trim();
+  if (explicitId) {
+    voiceIdCache = explicitId;
+    console.log("[tts] using TTS_VOICE_ID:", explicitId);
+    return voiceIdCache;
+  }
+
+  const targetName = (process.env.TTS_VOICE_NAME?.trim() || DEFAULT_VOICE_NAME);
+
   try {
     const res = await fetch("https://api.elevenlabs.io/v1/voices", {
       headers: { "xi-api-key": apiKey },
@@ -28,19 +49,18 @@ async function resolveVoiceId(apiKey: string): Promise<string> {
     const data = (await res.json()) as {
       voices: Array<{ voice_id: string; name: string }>;
     };
-    /* ElevenLabs voice names often include a tagline, e.g.
-       "Mia - Lively, Crisp, Expressive". Match by first-word so the
-       descriptive suffix doesn't break us. */
-    const mia = data.voices.find((v) =>
-      /^mia(\s|-|,|$)/i.test(v.name.trim()),
-    );
-    if (mia) {
-      voiceIdCache = mia.voice_id;
-      console.log("[tts] resolved Mia voice_id:", mia.voice_id);
+    /* ElevenLabs voice names often include a tagline (e.g. "Mia - Lively,
+       Crisp, Expressive"). Match by first-word so the suffix doesn't
+       break us. */
+    const re = escapeRegexFirstWord(targetName);
+    const found = data.voices.find((v) => re.test(v.name.trim()));
+    if (found) {
+      voiceIdCache = found.voice_id;
+      console.log(`[tts] resolved '${targetName}' → ${found.name}`, found.voice_id);
     } else {
       voiceIdCache = FALLBACK_VOICE_ID;
       console.log(
-        "[tts] no voice named 'Mia' in this account; using fallback",
+        `[tts] no voice matching '${targetName}' in this account; using fallback`,
         FALLBACK_VOICE_ID,
         "available:",
         data.voices.map((v) => v.name).join(", "),
