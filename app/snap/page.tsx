@@ -34,11 +34,15 @@ function playTts(text: string): HTMLAudioElement | null {
   }
 }
 
-/* iOS Safari requires audio playback to be "unlocked" by initializing
-   or resuming an AudioContext synchronously inside a user gesture. Once
-   unlocked, subsequent HTMLAudioElement.play() calls (including async
-   ones from setTimeout / promise-resolution callbacks) work normally.
-   Idempotent — safe to call from every entry point. */
+/* iOS Safari requires audio playback to be "unlocked" by playing audio
+   inside a user-gesture call stack. Just creating an AudioContext is
+   not enough — iOS needs at least one buffer to actually flow through
+   the audio output during the gesture. After that, async audio plays
+   (HTMLAudioElement, future AudioContext nodes, etc.) all work.
+
+   This function is idempotent: the AudioContext is cached, but a fresh
+   silent 1-sample buffer plays each time so even iOS WKWebViews that
+   re-suspend the session between gestures get re-primed. */
 let audioContextRef: AudioContext | null = null;
 function unlockAudioContext(): void {
   if (typeof window === "undefined") return;
@@ -48,15 +52,23 @@ function unlockAudioContext(): void {
         webkitAudioContext?: typeof AudioContext;
       };
       const Ctx = window.AudioContext || W.webkitAudioContext;
-      if (Ctx) {
-        audioContextRef = new Ctx();
-      }
+      if (!Ctx) return;
+      audioContextRef = new Ctx();
     }
-    if (audioContextRef && audioContextRef.state === "suspended") {
+    if (audioContextRef.state === "suspended") {
       audioContextRef.resume().catch(() => {
         /* ignore */
       });
     }
+    /* Tickle a 1-sample silent buffer through the destination — this
+       is the actual iOS unlock signal. Without this, iOS leaves the
+       audio session in a half-state and async <Audio>.play() goes
+       silent even though resume() was called. */
+    const buf = audioContextRef.createBuffer(1, 1, 22050);
+    const src = audioContextRef.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioContextRef.destination);
+    src.start(0);
   } catch {
     /* ignore */
   }
