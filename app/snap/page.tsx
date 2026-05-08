@@ -163,7 +163,7 @@ function SnapInner() {
     if (phase !== "scanning") return;
     let ttsAudio: HTMLAudioElement | null = null;
     const delay = setTimeout(() => {
-      ttsAudio = playTts("Let's see!");
+      ttsAudio = playTts("Let me see what you have inside that plate!");
     }, 250);
     return () => {
       clearTimeout(delay);
@@ -443,8 +443,8 @@ function SnapInner() {
                 bubble. Wiggles gently while the AI thinks. */}
             <div className="absolute bottom-4 right-4 flex items-end gap-2 pointer-events-none animate-fade-in">
               <div className="bg-cream-soft border-2 border-sage-pale rounded-[14px] px-3 py-2 shadow-md mb-3 relative">
-                <div className="font-serif text-[13px] font-bold text-ink leading-tight whitespace-nowrap">
-                  LET&apos;S SEE!
+                <div className="font-serif text-[12px] font-bold text-ink leading-tight max-w-[150px]">
+                  LET ME SEE WHAT YOU HAVE!
                 </div>
                 {/* Tail pointing down-right at the carrot */}
                 <div
