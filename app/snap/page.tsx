@@ -34,6 +34,34 @@ function playTts(text: string): HTMLAudioElement | null {
   }
 }
 
+/* iOS Safari requires audio playback to be "unlocked" by initializing
+   or resuming an AudioContext synchronously inside a user gesture. Once
+   unlocked, subsequent HTMLAudioElement.play() calls (including async
+   ones from setTimeout / promise-resolution callbacks) work normally.
+   Idempotent — safe to call from every entry point. */
+let audioContextRef: AudioContext | null = null;
+function unlockAudioContext(): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (!audioContextRef) {
+      const W = window as Window & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const Ctx = window.AudioContext || W.webkitAudioContext;
+      if (Ctx) {
+        audioContextRef = new Ctx();
+      }
+    }
+    if (audioContextRef && audioContextRef.state === "suspended") {
+      audioContextRef.resume().catch(() => {
+        /* ignore */
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /* Resize + JPEG-encode the image client-side so it stays well under
    Anthropic's 5MB-after-base64 vision limit. Phone photos are routinely
    4-12 MB raw which would exceed the limit; downscaling to 1600px on
@@ -199,6 +227,7 @@ function SnapInner() {
   }, [phase, detectedFoods]);
 
   function handlePickFile(file: File) {
+    unlockAudioContext();
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     const url = URL.createObjectURL(file);
     setPickedFile(file);
@@ -262,6 +291,10 @@ function SnapInner() {
 
   function handleShutterClick() {
     if (phase !== "idle") return;
+    /* Unlock audio synchronously inside the shutter tap — iOS Safari
+       won't let later async <Audio>.play() calls produce sound unless
+       an AudioContext was opened in this gesture. */
+    unlockAudioContext();
     if (pickedFile) {
       triggerShutter(pickedFile);
     } else {
@@ -549,7 +582,10 @@ function SnapInner() {
               <button
                 type="button"
                 aria-label="Photo library"
-                onClick={() => libraryInputRef.current?.click()}
+                onClick={() => {
+                  unlockAudioContext();
+                  libraryInputRef.current?.click();
+                }}
                 className="w-11 h-11 rounded-[14px] bg-white/[0.08] text-cream-soft flex items-center justify-center"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
