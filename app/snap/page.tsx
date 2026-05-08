@@ -163,33 +163,37 @@ function SnapInner() {
       confetti({ particleCount: 70, spread: 110, origin: { x: 0.85, y: 0.5 }, colors: palette });
     }, 440);
 
-    /* Audio track lives at /public/HealthyPlate.mp4 — new Audio() plays the
-       audio track of the MP4 file. Silent fallback if the file goes missing. */
+    /* Audio sequence:
+         1. /HealthyPlate.mp4 chime (always, ~2-3s)
+         2. ElevenLabs Mia line via /api/tts (only if veggies detected)
+       Chained on the chime's `ended` event rather than a fixed
+       setTimeout — iOS Safari serializes audio elements and the
+       two audios on overlapping timers tend to cancel each other. */
+    const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
+    let ttsAudio: HTMLAudioElement | null = null;
+
+    function fireVeggieLine() {
+      if (!hasVeggies) return;
+      ttsAudio = playTts(
+        "Great job! You have veggies in your plate making you stronger!",
+      );
+    }
+
     const audio = new Audio("/HealthyPlate.mp4");
     audio.volume = 0.6;
+    audio.onended = fireVeggieLine;
     audio.play().catch((err) => {
       console.log("[snap] HealthyPlate.mp4 not playing:", err);
+      /* If the chime can't play, fall back to the TTS line directly so
+         we still get the celebratory cue. */
+      fireVeggieLine();
     });
-
-    /* When at least one vegetable shows up on the plate, ElevenLabs
-       (Mia) speaks an encouraging line via the /api/tts proxy. Plays
-       after the chime so the two cues don't step on each other. */
-    const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
-    let t3: ReturnType<typeof setTimeout> | null = null;
-    let ttsAudio: HTMLAudioElement | null = null;
-    if (hasVeggies) {
-      t3 = setTimeout(() => {
-        ttsAudio = playTts(
-          "Great job! You have veggies in your plate making you stronger!",
-        );
-      }, 1100);
-    }
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      if (t3) clearTimeout(t3);
       audio.pause();
+      audio.onended = null;
       if (ttsAudio) ttsAudio.pause();
     };
   }, [phase, detectedFoods]);

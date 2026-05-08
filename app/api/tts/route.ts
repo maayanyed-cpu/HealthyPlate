@@ -28,7 +28,12 @@ async function resolveVoiceId(apiKey: string): Promise<string> {
     const data = (await res.json()) as {
       voices: Array<{ voice_id: string; name: string }>;
     };
-    const mia = data.voices.find((v) => v.name.trim().toLowerCase() === "mia");
+    /* ElevenLabs voice names often include a tagline, e.g.
+       "Mia - Lively, Crisp, Expressive". Match by first-word so the
+       descriptive suffix doesn't break us. */
+    const mia = data.voices.find((v) =>
+      /^mia(\s|-|,|$)/i.test(v.name.trim()),
+    );
     if (mia) {
       voiceIdCache = mia.voice_id;
       console.log("[tts] resolved Mia voice_id:", mia.voice_id);
