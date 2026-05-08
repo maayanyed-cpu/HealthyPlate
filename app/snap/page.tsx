@@ -35,14 +35,14 @@ function clearActiveAudio(): void {
     activeHum.stop();
     activeHum = null;
   }
-  for (const a of activeAudios) {
+  activeAudios.forEach((a) => {
     try {
       a.pause();
       a.src = "";
     } catch {
       /* node already cleaned up */
     }
-  }
+  });
   activeAudios.clear();
 }
 
