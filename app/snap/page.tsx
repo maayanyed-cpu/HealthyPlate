@@ -17,20 +17,156 @@ type DetectedFood = {
   box: { x: number; y: number; width: number; height: number };
 };
 
-/* Helper to fire an mp3 from the /api/tts ElevenLabs proxy. The same
-   <Audio> mechanism as the celebration chime, so if the chime plays
-   through on the device, this should too. */
-function playTts(text: string): HTMLAudioElement | null {
+/* ───── Audio engine ─────────────────────────────────────────────────
+   Module-level state so the scanning hum / pending TTS audios persist
+   across re-renders, and a new scan can kill any previous audio
+   without leaking nodes. */
+let activeHum: { stop: () => void } | null = null;
+const activeAudios: Set<HTMLAudioElement> = new Set();
+
+function getCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!audioContextRef) return null;
+  return audioContextRef.state === "closed" ? null : audioContextRef;
+}
+
+function clearActiveAudio(): void {
+  if (activeHum) {
+    activeHum.stop();
+    activeHum = null;
+  }
+  for (const a of activeAudios) {
+    try {
+      a.pause();
+      a.src = "";
+    } catch {
+      /* node already cleaned up */
+    }
+  }
+  activeAudios.clear();
+}
+
+/* Fire a TTS line via the /api/tts proxy. Tracked at module level so a
+   new scan can interrupt any pending playback. Volume 1.0 — Gigi is
+   the star, the SFX sit underneath at ~60%. */
+function playTtsLayered(text: string): HTMLAudioElement | null {
   if (typeof window === "undefined") return null;
   try {
     const audio = new Audio(`/api/tts?text=${encodeURIComponent(text)}`);
-    audio.volume = 0.95;
+    audio.volume = 1.0;
+    audio.addEventListener("ended", () => activeAudios.delete(audio));
     audio.play().catch((err) => {
       console.log("[snap] TTS not playing:", err);
     });
+    activeAudios.add(audio);
     return audio;
   } catch {
     return null;
+  }
+}
+
+/* "Magic hum" — two soft sines a perfect-fifth apart with a slow
+   vibrato. Held at ~0.06 master gain so it sits well under the TTS. */
+function startScanningHum(): { stop: () => void } | null {
+  const ctx = getCtx();
+  if (!ctx) return null;
+  try {
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(0.06, now + 0.4); // 60% mix
+
+    const osc1 = ctx.createOscillator();
+    osc1.type = "sine";
+    osc1.frequency.value = 196; // G3
+
+    const osc2 = ctx.createOscillator();
+    osc2.type = "sine";
+    osc2.frequency.value = 294; // D4 (perfect fifth)
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.value = 5;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 4;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc1.frequency);
+    lfoGain.connect(osc2.frequency);
+
+    osc1.connect(master);
+    osc2.connect(master);
+    master.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    lfo.start(now);
+
+    return {
+      stop() {
+        try {
+          const t = ctx.currentTime;
+          master.gain.cancelScheduledValues(t);
+          master.gain.setValueAtTime(master.gain.value, t);
+          master.gain.linearRampToValueAtTime(0, t + 0.25);
+          osc1.stop(t + 0.3);
+          osc2.stop(t + 0.3);
+          lfo.stop(t + 0.3);
+        } catch {
+          /* nodes already stopped */
+        }
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* "Pop + shimmer" confetti SFX. One-shot — auto-cleans when the
+   buffers finish. Capped at ~60% relative loudness so the TTS that
+   layers over it stays clear. */
+function playConfettiPopSfx(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+
+    // Pop: short pitched note, falling
+    const pop = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    pop.type = "triangle";
+    pop.frequency.setValueAtTime(1200, now);
+    pop.frequency.exponentialRampToValueAtTime(440, now + 0.08);
+    popGain.gain.setValueAtTime(0.0001, now);
+    popGain.gain.exponentialRampToValueAtTime(0.18, now + 0.005);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    pop.connect(popGain).connect(ctx.destination);
+    pop.start(now);
+    pop.stop(now + 0.2);
+
+    // Shimmer: filtered noise with a falling bandpass sweep
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.6), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const decay = 1 - i / data.length;
+      data[i] = (Math.random() * 2 - 1) * decay * decay;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.value = 1.5;
+    filter.frequency.setValueAtTime(7000, now + 0.05);
+    filter.frequency.exponentialRampToValueAtTime(1500, now + 0.5);
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, now + 0.05);
+    noiseGain.gain.linearRampToValueAtTime(0.09, now + 0.1);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now + 0.05);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -168,26 +304,29 @@ function SnapInner() {
     return () => clearInterval(interval);
   }, [phase]);
 
-  /* "Let's see!" while the AI is identifying foods. ElevenLabs voice
-     via /api/tts. The shutter tap counts as the user gesture so the
-     subsequent Audio.play() is allowed. */
+  /* Scanning phase audio: a magic-hum SFX kicks off the moment scanning
+     begins, with Gigi's "Let's check what you have inside this plate!"
+     layered on top simultaneously. Both fire instantly — no setTimeout
+     delay — so the dead air during the API call is filled. */
   useEffect(() => {
     if (phase !== "scanning") return;
-    let ttsAudio: HTMLAudioElement | null = null;
-    const delay = setTimeout(() => {
-      ttsAudio = playTts("Let me see what you have inside that plate!");
-    }, 250);
+    /* Defensive: clear anything left over from a previous scan/celebrate. */
+    clearActiveAudio();
+    activeHum = startScanningHum();
+    playTtsLayered("Let's check what you have inside this plate!");
     return () => {
-      clearTimeout(delay);
-      if (ttsAudio) ttsAudio.pause();
+      clearActiveAudio();
     };
   }, [phase]);
 
-  /* Big finish: confetti + audio when we enter the celebrating phase. */
+  /* Celebration phase audio: stop the hum, fire a confetti pop SFX, and
+     layer the Gigi success line over it. No mp4 chime — the synthesized
+     pop+shimmer is the new "background song". */
   useEffect(() => {
     if (phase !== "celebrating") return;
     console.log("[snap] celebrating with", detectedFoods.length, "characters:", detectedFoods.map((f) => f.name));
 
+    /* Visual confetti — three staggered bursts, unchanged. */
     const palette = ["#5A8073", "#D88463", "#E5B96A", "#FAF7F0", "#8B5A6B", "#B8E1B8"];
     confetti({
       particleCount: 120,
@@ -203,38 +342,31 @@ function SnapInner() {
       confetti({ particleCount: 70, spread: 110, origin: { x: 0.85, y: 0.5 }, colors: palette });
     }, 440);
 
-    /* Audio sequence:
-         1. /HealthyPlate.mp4 chime (always, ~2-3s)
-         2. ElevenLabs Mia line via /api/tts (only if veggies detected)
-       Chained on the chime's `ended` event rather than a fixed
-       setTimeout — iOS Safari serializes audio elements and the
-       two audios on overlapping timers tend to cancel each other. */
-    const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
-    let ttsAudio: HTMLAudioElement | null = null;
-
-    function fireVeggieLine() {
-      if (!hasVeggies) return;
-      ttsAudio = playTts(
-        "Great job! You have veggies in your plate making you stronger!",
-      );
+    /* Stop the hum if the scan-phase cleanup hasn't already; fire the
+       confetti pop SFX immediately. */
+    if (activeHum) {
+      activeHum.stop();
+      activeHum = null;
     }
+    playConfettiPopSfx();
 
-    const audio = new Audio("/HealthyPlate.mp4");
-    audio.volume = 0.6;
-    audio.onended = fireVeggieLine;
-    audio.play().catch((err) => {
-      console.log("[snap] HealthyPlate.mp4 not playing:", err);
-      /* If the chime can't play, fall back to the TTS line directly so
-         we still get the celebratory cue. */
-      fireVeggieLine();
-    });
+    /* Gigi's success line — only when veggies are on the plate. Plays
+       300ms after the pop so the shimmer doesn't drown the first words. */
+    const hasVeggies = detectedFoods.some((f) => f.category === "vegetable");
+    let ttsTimer: ReturnType<typeof setTimeout> | null = null;
+    if (hasVeggies) {
+      ttsTimer = setTimeout(() => {
+        playTtsLayered(
+          "Great job! Looks like you have veggies inside! This is great. You want to add even more?",
+        );
+      }, 300);
+    }
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      audio.pause();
-      audio.onended = null;
-      if (ttsAudio) ttsAudio.pause();
+      if (ttsTimer) clearTimeout(ttsTimer);
+      clearActiveAudio();
     };
   }, [phase, detectedFoods]);
 
